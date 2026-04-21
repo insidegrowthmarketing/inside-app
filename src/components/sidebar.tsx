@@ -54,15 +54,15 @@ export function Sidebar() {
   const [clientesAberto, setClientesAberto] = useState(isClientesAtivo);
 
   return (
-    <aside className="flex h-screen w-60 flex-col border-r border-zinc-800 bg-zinc-950">
+    <aside className="flex h-screen w-64 flex-col border-r border-zinc-800 bg-zinc-950">
       {/* Logo */}
-      <div className="flex h-14 items-center px-4 border-b border-zinc-800">
+      <div className="flex items-center justify-center border-b border-zinc-800 px-5 py-5">
         <Image
           src="/Logo_INSIDE-02.svg"
           alt="Inside"
-          width={120}
-          height={40}
-          className="h-8 w-auto"
+          width={160}
+          height={64}
+          className="h-16 w-auto"
           priority
         />
       </div>

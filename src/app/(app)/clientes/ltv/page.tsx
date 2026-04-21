@@ -160,6 +160,8 @@ export default async function LtvPage({ searchParams }: PageProps) {
                 <TableRow className="border-zinc-800 hover:bg-transparent">
                   <TableHead className="text-zinc-400 whitespace-nowrap">Nome</TableHead>
                   <TableHead className="text-zinc-400 whitespace-nowrap">Pacote</TableHead>
+                  <TableHead className="text-zinc-400 whitespace-nowrap">Gestor de projetos</TableHead>
+                  <TableHead className="text-zinc-400 whitespace-nowrap">Gestor de tráfego</TableHead>
                   <TableHead className="text-zinc-400 whitespace-nowrap">Moeda</TableHead>
                   <TableHead className="text-zinc-400 whitespace-nowrap">Fee mensal</TableHead>
                   <TableHead className="text-zinc-400 whitespace-nowrap">Início contrato</TableHead>
@@ -184,6 +186,12 @@ export default async function LtvPage({ searchParams }: PageProps) {
                       </TableCell>
                       <TableCell className="text-zinc-300 whitespace-nowrap">
                         {getLabelPacote(cliente.pacote)}
+                      </TableCell>
+                      <TableCell className="text-zinc-400 whitespace-nowrap">
+                        {cliente.gestor_projetos || "—"}
+                      </TableCell>
+                      <TableCell className="text-zinc-400 whitespace-nowrap">
+                        {cliente.gestor_trafego || "—"}
                       </TableCell>
                       <TableCell className="text-zinc-400 whitespace-nowrap">
                         {simboloMoeda}

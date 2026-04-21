@@ -54,54 +54,20 @@ export function LtvFilters({ filtros }: LtvFiltersProps) {
     filtros.gestor_trafego !== "todos" ||
     filtros.busca !== "";
 
+  const triggerCls = "h-9 w-full border-zinc-800 bg-zinc-950 text-zinc-200 text-sm";
+  const contentCls = "border-zinc-800 bg-zinc-950";
+
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <div className="space-y-1">
-          <Label className="text-xs text-zinc-500">Gestor de Projetos</Label>
-          <Select
-            value={filtros.gestor_projetos}
-            onValueChange={(v) => { if (v) atualizarFiltro("gestor_projetos", v); }}
-          >
-            <SelectTrigger className="border-zinc-800 bg-zinc-900 text-zinc-200 text-xs">
-              <SelectValue placeholder="Gestor de projetos" />
-            </SelectTrigger>
-            <SelectContent className="border-zinc-800 bg-zinc-950">
-              <SelectItem value="todos">Todos os gestores</SelectItem>
-              {GESTORES_PROJETOS.map((g) => (
-                <SelectItem key={g} value={g}>{g}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-1">
-          <Label className="text-xs text-zinc-500">Gestor de Tráfego</Label>
-          <Select
-            value={filtros.gestor_trafego}
-            onValueChange={(v) => { if (v) atualizarFiltro("gestor_trafego", v); }}
-          >
-            <SelectTrigger className="border-zinc-800 bg-zinc-900 text-zinc-200 text-xs">
-              <SelectValue placeholder="Gestor de tráfego" />
-            </SelectTrigger>
-            <SelectContent className="border-zinc-800 bg-zinc-950">
-              <SelectItem value="todos">Todos os gestores</SelectItem>
-              {GESTORES_TRAFEGO.map((g) => (
-                <SelectItem key={g} value={g}>{g}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 space-y-3">
+      {/* Linha 1: busca + limpar */}
       <div className="flex items-center gap-3">
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+        <div className="relative w-72">
+          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
           <Input
             placeholder="Buscar por nome..."
             defaultValue={filtros.busca}
             onChange={(e) => atualizarFiltro("busca", e.target.value)}
-            className="border-zinc-800 bg-zinc-900 pl-9 text-zinc-200 placeholder:text-zinc-500"
+            className="h-9 border-zinc-800 bg-zinc-950 pl-9 text-sm text-zinc-200 placeholder:text-zinc-500"
           />
         </div>
 
@@ -109,13 +75,42 @@ export function LtvFilters({ filtros }: LtvFiltersProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="gap-1 text-zinc-400 hover:text-white text-xs"
+            className="h-9 gap-1 text-zinc-500 hover:text-white text-xs shrink-0"
             onClick={limparFiltros}
           >
             <X className="h-3 w-3" />
             Limpar filtros
           </Button>
         )}
+      </div>
+
+      {/* Linha 2: dropdowns compactos lado a lado */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1 min-w-[180px] w-[180px]">
+          <Label className="text-xs text-zinc-400">Gestor de Projetos</Label>
+          <Select value={filtros.gestor_projetos} onValueChange={(v) => { if (v) atualizarFiltro("gestor_projetos", v); }}>
+            <SelectTrigger className={triggerCls}><SelectValue placeholder="Todos" /></SelectTrigger>
+            <SelectContent className={contentCls}>
+              <SelectItem value="todos">Todos</SelectItem>
+              {GESTORES_PROJETOS.map((g) => (
+                <SelectItem key={g} value={g}>{g}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1 min-w-[180px] w-[180px]">
+          <Label className="text-xs text-zinc-400">Gestor de Tráfego</Label>
+          <Select value={filtros.gestor_trafego} onValueChange={(v) => { if (v) atualizarFiltro("gestor_trafego", v); }}>
+            <SelectTrigger className={triggerCls}><SelectValue placeholder="Todos" /></SelectTrigger>
+            <SelectContent className={contentCls}>
+              <SelectItem value="todos">Todos</SelectItem>
+              {GESTORES_TRAFEGO.map((g) => (
+                <SelectItem key={g} value={g}>{g}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
     </div>
   );
