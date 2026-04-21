@@ -12,7 +12,12 @@ interface HeaderProps {
 export function Header({ titulo, children }: HeaderProps) {
   return (
     <header className="flex h-14 items-center justify-between border-b border-zinc-800 bg-zinc-950 px-6">
-      <h1 className="text-lg font-semibold text-white">{titulo}</h1>
+      <h1
+        className="text-lg font-bold bg-clip-text text-transparent"
+        style={{ backgroundImage: "var(--inside-gradient-horizontal)" }}
+      >
+        {titulo}
+      </h1>
 
       <div className="flex items-center gap-2">
         {children}

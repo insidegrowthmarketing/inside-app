@@ -32,8 +32,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
-
 import { formatarMoeda, formatarData } from "@/lib/formatters";
 import { formatarFusoHorario } from "@/lib/fuso-horario";
 import {
@@ -49,6 +47,7 @@ import {
   GESTORES_PROJETOS,
   GESTORES_TRAFEGO,
   PACOTES,
+  MOTIVOS_CHURN,
 } from "@/types/cliente";
 import type { Cliente } from "@/types/cliente";
 
@@ -419,15 +418,17 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="motivo_churn_inline">Motivo do churn</Label>
-              <Textarea
-                id="motivo_churn_inline"
-                placeholder="Descreva o motivo (opcional)..."
-                rows={3}
-                value={motivoChurn}
-                onChange={(e) => setMotivoChurn(e.target.value)}
-                className="border-zinc-800 bg-zinc-950 text-zinc-200"
-              />
+              <Label>Motivo do churn</Label>
+              <Select value={motivoChurn} onValueChange={(v) => { if (v) setMotivoChurn(v); }}>
+                <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200">
+                  <SelectValue placeholder="— Selecione —" />
+                </SelectTrigger>
+                <SelectContent className="border-zinc-800 bg-zinc-950">
+                  {MOTIVOS_CHURN.map((m) => (
+                    <SelectItem key={m} value={m}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter className="gap-2">

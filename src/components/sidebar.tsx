@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -49,14 +51,20 @@ const subMenuClientes = [
 export function Sidebar() {
   const pathname = usePathname();
   const isClientesAtivo = pathname.startsWith("/clientes");
+  const [clientesAberto, setClientesAberto] = useState(isClientesAtivo);
 
   return (
     <aside className="flex h-screen w-60 flex-col border-r border-zinc-800 bg-zinc-950">
       {/* Logo */}
-      <div className="flex h-14 items-center px-5 border-b border-zinc-800">
-        <span className="text-lg font-bold tracking-tight text-white">
-          Inside
-        </span>
+      <div className="flex h-14 items-center px-4 border-b border-zinc-800">
+        <Image
+          src="/Logo_INSIDE-02.svg"
+          alt="Inside"
+          width={120}
+          height={40}
+          className="h-8 w-auto"
+          priority
+        />
       </div>
 
       {/* Navegação */}
@@ -82,8 +90,8 @@ export function Sidebar() {
             );
           })}
 
-          {/* Clientes - menu expansível */}
-          <Collapsible defaultOpen={isClientesAtivo}>
+          {/* Clientes - menu expansível controlado */}
+          <Collapsible open={clientesAberto} onOpenChange={setClientesAberto}>
             <CollapsibleTrigger
               className={cn(
                 "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",

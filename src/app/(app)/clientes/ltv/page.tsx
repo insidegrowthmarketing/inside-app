@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search, History } from "lucide-react";
+import { History } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,11 @@ import type { Cliente } from "@/types/cliente";
 import { LtvFilters } from "./ltv-filters";
 
 interface PageProps {
-  searchParams: Promise<{ busca?: string }>;
+  searchParams: Promise<{
+    busca?: string;
+    gestor_projetos?: string;
+    gestor_trafego?: string;
+  }>;
 }
 
 function calcularMesesAtivo(inicio: string | null, saida: string | null): number {
@@ -51,6 +55,14 @@ export default async function LtvPage({ searchParams }: PageProps) {
     query = query.ilike("nome", `%${params.busca}%`);
   }
 
+  if (params.gestor_projetos && params.gestor_projetos !== "todos") {
+    query = query.eq("gestor_projetos", params.gestor_projetos);
+  }
+
+  if (params.gestor_trafego && params.gestor_trafego !== "todos") {
+    query = query.eq("gestor_trafego", params.gestor_trafego);
+  }
+
   const { data: clientes, error } = await query;
 
   if (error) {
@@ -59,7 +71,6 @@ export default async function LtvPage({ searchParams }: PageProps) {
 
   const lista = (clientes ?? []) as Cliente[];
 
-  // Calcular métricas
   const totalChurned = lista.length;
   const ltvBRL = lista
     .filter((c) => (c.moeda || "BRL") === "BRL")
@@ -73,6 +84,12 @@ export default async function LtvPage({ searchParams }: PageProps) {
       const meses = calcularMesesAtivo(c.inicio_contrato, c.data_saida);
       return acc + Number(c.fee_mensal) * meses;
     }, 0);
+
+  const filtros = {
+    gestor_projetos: params.gestor_projetos || "todos",
+    gestor_trafego: params.gestor_trafego || "todos",
+    busca: params.busca || "",
+  };
 
   return (
     <>
@@ -120,8 +137,8 @@ export default async function LtvPage({ searchParams }: PageProps) {
           </Card>
         </div>
 
-        {/* Busca */}
-        <LtvFilters buscaAtual={params.busca || ""} />
+        {/* Filtros */}
+        <LtvFilters filtros={filtros} />
 
         {/* Tabela */}
         {lista.length === 0 ? (

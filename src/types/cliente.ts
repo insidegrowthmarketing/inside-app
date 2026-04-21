@@ -121,6 +121,20 @@ export const PACOTES = [
   { value: "ia", label: "IA", dias_contrato: null },
 ] as const;
 
+/** Motivos de churn */
+export const MOTIVOS_CHURN = [
+  "Alta demanda",
+  "Apenas estruturação",
+  "Baixo engajamento",
+  "Baixa maturidade digital",
+  "Baixa verba para investir",
+  "Baixo retorno",
+  "Cumpriu contrato e não renovou",
+  "Inadimplente",
+  "Primarizou",
+  "Fechou a empresa",
+] as const;
+
 /** Moedas aceitas */
 export const MOEDAS = [
   { value: "BRL", label: "R$", nome: "Real" },

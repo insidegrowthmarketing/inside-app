@@ -13,7 +13,8 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const CORES_PACOTE = ["#3b82f6", "#22c55e", "#a855f7", "#f97316"];
+/** Paleta Inside para gráficos */
+const CORES_INSIDE = ["#E550A5", "#2D7CDB", "#D62087", "#1D5AA5", "#7B3FC9", "#F6F6F7"];
 
 interface DashboardChartsProps {
   dadosStatus: { name: string; value: number; fill: string }[];
@@ -21,6 +22,13 @@ interface DashboardChartsProps {
   dadosGestorTrafego: { name: string; value: number }[];
   dadosGestorProjetos: { name: string; value: number }[];
 }
+
+const tooltipStyle = {
+  background: "#18181b",
+  border: "1px solid #3f3f46",
+  borderRadius: "8px",
+  color: "#e4e4e7",
+};
 
 export function DashboardCharts({
   dadosStatus,
@@ -33,6 +41,14 @@ export function DashboardCharts({
   if (!temDados) {
     return null;
   }
+
+  // Cores de status usando paleta Inside
+  const statusCoresInside: Record<string, string> = {
+    "A iniciar": "#71717a",
+    "Onboarding": "#2D7CDB",
+    "Ongoing": "#E550A5",
+    "Aviso prévio": "#eab308",
+  };
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -60,17 +76,10 @@ export function DashboardCharts({
                   labelLine={false}
                 >
                   {dadosStatus.map((entry, i) => (
-                    <Cell key={i} fill={entry.fill} />
+                    <Cell key={i} fill={statusCoresInside[entry.name] || CORES_INSIDE[i % CORES_INSIDE.length]} />
                   ))}
                 </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: "#18181b",
-                    border: "1px solid #3f3f46",
-                    borderRadius: "8px",
-                    color: "#e4e4e7",
-                  }}
-                />
+                <Tooltip contentStyle={tooltipStyle} />
               </PieChart>
             </ResponsiveContainer>
           )}
@@ -101,17 +110,10 @@ export function DashboardCharts({
                   labelLine={false}
                 >
                   {dadosPacote.map((_, i) => (
-                    <Cell key={i} fill={CORES_PACOTE[i % CORES_PACOTE.length]} />
+                    <Cell key={i} fill={CORES_INSIDE[i % CORES_INSIDE.length]} />
                   ))}
                 </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: "#18181b",
-                    border: "1px solid #3f3f46",
-                    borderRadius: "8px",
-                    color: "#e4e4e7",
-                  }}
-                />
+                <Tooltip contentStyle={tooltipStyle} />
               </PieChart>
             </ResponsiveContainer>
           )}
@@ -133,15 +135,8 @@ export function DashboardCharts({
               <BarChart data={dadosGestorTrafego} layout="vertical" margin={{ left: 0, right: 20, top: 0, bottom: 0 }}>
                 <XAxis type="number" tick={{ fill: "#a1a1aa", fontSize: 12 }} axisLine={false} tickLine={false} />
                 <YAxis type="category" dataKey="name" width={100} tick={{ fill: "#d4d4d8", fontSize: 12 }} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    background: "#18181b",
-                    border: "1px solid #3f3f46",
-                    borderRadius: "8px",
-                    color: "#e4e4e7",
-                  }}
-                />
-                <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Bar dataKey="value" fill="#E550A5" radius={[0, 4, 4, 0]} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -163,15 +158,8 @@ export function DashboardCharts({
               <BarChart data={dadosGestorProjetos} layout="vertical" margin={{ left: 0, right: 20, top: 0, bottom: 0 }}>
                 <XAxis type="number" tick={{ fill: "#a1a1aa", fontSize: 12 }} axisLine={false} tickLine={false} />
                 <YAxis type="category" dataKey="name" width={100} tick={{ fill: "#d4d4d8", fontSize: 12 }} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    background: "#18181b",
-                    border: "1px solid #3f3f46",
-                    borderRadius: "8px",
-                    color: "#e4e4e7",
-                  }}
-                />
-                <Bar dataKey="value" fill="#22c55e" radius={[0, 4, 4, 0]} barSize={20} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Bar dataKey="value" fill="#2D7CDB" radius={[0, 4, 4, 0]} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
           )}

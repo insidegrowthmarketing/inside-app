@@ -39,6 +39,7 @@ import {
   FUSOS_HORARIOS,
   PACOTES,
   MOEDAS,
+  MOTIVOS_CHURN,
 } from "@/types/cliente";
 import type { Cliente } from "@/types/cliente";
 
@@ -493,15 +494,17 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="motivo_churn">Motivo do churn</Label>
-              <Textarea
-                id="motivo_churn"
-                placeholder="Descreva o motivo (opcional)..."
-                rows={3}
-                value={motivoChurn}
-                onChange={(e) => setMotivoChurn(e.target.value)}
-                className="border-zinc-800 bg-zinc-950 text-zinc-200"
-              />
+              <Label>Motivo do churn</Label>
+              <Select value={motivoChurn} onValueChange={(v) => { if (v) setMotivoChurn(v); }}>
+                <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200">
+                  <SelectValue placeholder="— Selecione —" />
+                </SelectTrigger>
+                <SelectContent className="border-zinc-800 bg-zinc-950">
+                  {MOTIVOS_CHURN.map((m) => (
+                    <SelectItem key={m} value={m}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter className="gap-2">

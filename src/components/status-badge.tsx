@@ -4,8 +4,8 @@ import { cn } from "@/lib/utils";
 
 const corClasses: Record<string, string> = {
   zinc: "bg-zinc-700 text-zinc-200 hover:bg-zinc-700",
-  blue: "bg-blue-900 text-blue-300 hover:bg-blue-900",
-  green: "bg-green-900 text-green-300 hover:bg-green-900",
+  blue: "bg-[#2D7CDB]/20 text-[#2D7CDB] hover:bg-[#2D7CDB]/20",
+  green: "bg-[#E550A5]/15 text-[#E550A5] hover:bg-[#E550A5]/15",
   yellow: "bg-yellow-900 text-yellow-300 hover:bg-yellow-900",
   red: "bg-red-900 text-red-300 hover:bg-red-900",
 };

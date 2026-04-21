@@ -119,15 +119,15 @@ export default async function DashboardPage() {
   // Últimos 5 clientes
   const ultimos5 = clientes.slice(0, 5);
 
-  // Alertas: aviso prévio + Start vencendo em 30 dias
+  // Alertas: aviso prévio + Start vencendo em 15 dias
   const hoje = new Date();
-  const em30dias = new Date();
-  em30dias.setDate(em30dias.getDate() + 30);
+  const em15dias = new Date();
+  em15dias.setDate(em15dias.getDate() + 15);
 
   const startVencendo = clientes.filter((c) => {
     if (c.pacote !== "start" || !c.fim_contrato) return false;
     const fim = new Date(c.fim_contrato + "T00:00:00");
-    return fim >= hoje && fim <= em30dias;
+    return fim >= hoje && fim <= em15dias;
   });
 
   return (
@@ -285,7 +285,7 @@ export default async function DashboardPage() {
               {startVencendo.length > 0 && (
                 <div>
                   <p className="mb-2 text-xs font-medium text-orange-400 uppercase tracking-wider">
-                    Contratos Start vencendo em 30 dias
+                    Contratos Start vencendo em 15 dias
                   </p>
                   <div className="space-y-2">
                     {startVencendo.map((c) => {
