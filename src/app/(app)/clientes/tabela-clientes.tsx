@@ -14,6 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -30,11 +32,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 
 import { formatarMoeda, formatarData } from "@/lib/formatters";
+import { formatarFusoHorario } from "@/lib/fuso-horario";
 import {
   atualizarCampoCliente,
   atualizarClientesEmMassa,
+  atualizarPacoteCliente,
+  marcarChurn,
+  marcarChurnEmMassa,
 } from "./actions";
 import {
   STATUS_CLIENTE,
@@ -62,11 +69,6 @@ function getLabelStatus(value: string) {
   return STATUS_CLIENTE.find((s) => s.value === value)?.label ?? value;
 }
 
-function getLabelPacote(value: string | null) {
-  if (!value) return "—";
-  return PACOTES.find((p) => p.value === value)?.label ?? value;
-}
-
 export function TabelaClientes({ clientes }: TabelaClientesProps) {
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [dialogMassa, setDialogMassa] = useState<{
@@ -75,6 +77,11 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
     opcoes: readonly string[];
   } | null>(null);
   const [valorMassa, setValorMassa] = useState("");
+
+  // Dialog de churn (inline)
+  const [churnDialog, setChurnDialog] = useState<{ tipo: "inline"; clienteId: string } | { tipo: "massa" } | null>(null);
+  const [dataSaidaChurn, setDataSaidaChurn] = useState(new Date().toISOString().split("T")[0]);
+  const [motivoChurn, setMotivoChurn] = useState("");
 
   const todosIds = clientes.map((c) => c.id);
   const todosSelecionados = clientes.length > 0 && selecionados.size === clientes.length;
@@ -96,6 +103,21 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
     });
   }
 
+  async function handleInlineStatusChange(id: string, novoStatus: string) {
+    if (novoStatus === "churn") {
+      setChurnDialog({ tipo: "inline", clienteId: id });
+      setDataSaidaChurn(new Date().toISOString().split("T")[0]);
+      setMotivoChurn("");
+      return;
+    }
+    const resultado = await atualizarCampoCliente(id, "status", novoStatus);
+    if (resultado.error) {
+      toast.error(resultado.error);
+    } else {
+      toast.success("Status atualizado");
+    }
+  }
+
   async function handleInlineChange(id: string, campo: string, valor: string) {
     const resultado = await atualizarCampoCliente(id, campo, valor || null);
     if (resultado.error) {
@@ -105,8 +127,52 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
     }
   }
 
+  async function handlePacoteChange(id: string, novoPacote: string) {
+    const resultado = await atualizarPacoteCliente(id, novoPacote);
+    if (resultado.error) {
+      toast.error(resultado.error);
+    } else {
+      toast.success("Pacote atualizado");
+    }
+  }
+
+  async function confirmarChurn() {
+    if (!churnDialog || !dataSaidaChurn) return;
+
+    if (churnDialog.tipo === "inline") {
+      const resultado = await marcarChurn(churnDialog.clienteId, dataSaidaChurn, motivoChurn || null);
+      if (resultado.error) {
+        toast.error(resultado.error);
+      } else {
+        toast.success("Cliente marcado como churn");
+      }
+    } else {
+      const ids = Array.from(selecionados);
+      const resultado = await marcarChurnEmMassa(ids, dataSaidaChurn, motivoChurn || null);
+      if (resultado.error) {
+        toast.error(resultado.error);
+      } else {
+        toast.success(`${resultado.count} clientes marcados como churn`);
+        setSelecionados(new Set());
+      }
+    }
+
+    setChurnDialog(null);
+  }
+
   async function handleMassa() {
     if (!dialogMassa || !valorMassa) return;
+
+    // Se for status churn, abrir dialog de churn
+    if (dialogMassa.campo === "status" && valorMassa === "churn") {
+      setDialogMassa(null);
+      setValorMassa("");
+      setChurnDialog({ tipo: "massa" });
+      setDataSaidaChurn(new Date().toISOString().split("T")[0]);
+      setMotivoChurn("");
+      return;
+    }
+
     const ids = Array.from(selecionados);
     const resultado = await atualizarClientesEmMassa(ids, dialogMassa.campo, valorMassa);
     if (resultado.error) {
@@ -166,10 +232,7 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
           <TableHeader>
             <TableRow className="border-zinc-800 hover:bg-transparent">
               <TableHead className="w-10 text-zinc-400">
-                <Checkbox
-                  checked={todosSelecionados}
-                  onCheckedChange={toggleTodos}
-                />
+                <Checkbox checked={todosSelecionados} onCheckedChange={toggleTodos} />
               </TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Nome</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Status</TableHead>
@@ -192,10 +255,7 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
                 data-selected={selecionados.has(cliente.id) || undefined}
               >
                 <TableCell>
-                  <Checkbox
-                    checked={selecionados.has(cliente.id)}
-                    onCheckedChange={() => toggleUm(cliente.id)}
-                  />
+                  <Checkbox checked={selecionados.has(cliente.id)} onCheckedChange={() => toggleUm(cliente.id)} />
                 </TableCell>
                 <TableCell className="font-medium text-zinc-200 whitespace-nowrap">
                   {cliente.nome}
@@ -204,23 +264,33 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
                 <TableCell>
                   <Select
                     value={cliente.status}
-                    onValueChange={(v) => { if (v) handleInlineChange(cliente.id, "status", v); }}
+                    onValueChange={(v) => { if (v) handleInlineStatusChange(cliente.id, v); }}
                   >
                     <SelectTrigger className="h-8 w-[130px] border-zinc-800 bg-transparent text-xs p-1">
                       <StatusBadge status={cliente.status} />
                     </SelectTrigger>
                     <SelectContent className="border-zinc-800 bg-zinc-950">
                       {STATUS_CLIENTE.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>
-                          {s.label}
-                        </SelectItem>
+                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </TableCell>
-                {/* Pacote */}
-                <TableCell className="text-zinc-300 whitespace-nowrap">
-                  {getLabelPacote(cliente.pacote)}
+                {/* Pacote - dropdown inline */}
+                <TableCell>
+                  <Select
+                    value={cliente.pacote || ""}
+                    onValueChange={(v) => { if (v) handlePacoteChange(cliente.id, v); }}
+                  >
+                    <SelectTrigger className="h-8 w-[100px] border-zinc-800 bg-transparent text-xs text-zinc-300">
+                      <SelectValue placeholder="—" />
+                    </SelectTrigger>
+                    <SelectContent className="border-zinc-800 bg-zinc-950">
+                      {PACOTES.map((p) => (
+                        <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </TableCell>
                 {/* Fee mensal com moeda */}
                 <TableCell className="text-zinc-300 whitespace-nowrap">
@@ -237,9 +307,7 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
                     </SelectTrigger>
                     <SelectContent className="border-zinc-800 bg-zinc-950">
                       {FORMAS_PAGAMENTO.map((f) => (
-                        <SelectItem key={f} value={f}>
-                          {f}
-                        </SelectItem>
+                        <SelectItem key={f} value={f}>{f}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -255,9 +323,7 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
                     </SelectTrigger>
                     <SelectContent className="border-zinc-800 bg-zinc-950">
                       {GESTORES_PROJETOS.map((g) => (
-                        <SelectItem key={g} value={g}>
-                          {g}
-                        </SelectItem>
+                        <SelectItem key={g} value={g}>{g}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -273,16 +339,14 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
                     </SelectTrigger>
                     <SelectContent className="border-zinc-800 bg-zinc-950">
                       {GESTORES_TRAFEGO.map((g) => (
-                        <SelectItem key={g} value={g}>
-                          {g}
-                        </SelectItem>
+                        <SelectItem key={g} value={g}>{g}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </TableCell>
                 {/* Fuso horário */}
                 <TableCell className="text-zinc-400 whitespace-nowrap">
-                  {cliente.fuso_horario || "—"}
+                  {cliente.fuso_horario ? formatarFusoHorario(cliente.fuso_horario) : "—"}
                 </TableCell>
                 {/* Início contrato */}
                 <TableCell className="text-zinc-400 whitespace-nowrap">
@@ -310,9 +374,7 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
       <Dialog open={!!dialogMassa} onOpenChange={(open) => { if (!open) setDialogMassa(null); }}>
         <DialogContent className="border-zinc-800 bg-zinc-900">
           <DialogHeader>
-            <DialogTitle className="text-zinc-200">
-              {dialogMassa?.label}
-            </DialogTitle>
+            <DialogTitle className="text-zinc-200">{dialogMassa?.label}</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <Select value={valorMassa} onValueChange={(v) => { if (v) setValorMassa(v); }}>
@@ -329,15 +391,52 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
             </Select>
           </div>
           <DialogFooter className="gap-2">
-            <Button
-              variant="ghost"
-              className="text-zinc-400 hover:text-white"
-              onClick={() => setDialogMassa(null)}
-            >
+            <Button variant="ghost" className="text-zinc-400 hover:text-white" onClick={() => setDialogMassa(null)}>
               Cancelar
             </Button>
             <Button onClick={handleMassa} disabled={!valorMassa}>
               Aplicar a {selecionados.size} cliente{selecionados.size > 1 ? "s" : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de churn */}
+      <Dialog open={!!churnDialog} onOpenChange={(open) => { if (!open) setChurnDialog(null); }}>
+        <DialogContent className="border-zinc-800 bg-zinc-900">
+          <DialogHeader>
+            <DialogTitle className="text-zinc-200">Confirmar Churn</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="data_saida_inline">Data de saída *</Label>
+              <Input
+                id="data_saida_inline"
+                type="date"
+                value={dataSaidaChurn}
+                onChange={(e) => setDataSaidaChurn(e.target.value)}
+                className="border-zinc-800 bg-zinc-950 text-zinc-200"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="motivo_churn_inline">Motivo do churn</Label>
+              <Textarea
+                id="motivo_churn_inline"
+                placeholder="Descreva o motivo (opcional)..."
+                rows={3}
+                value={motivoChurn}
+                onChange={(e) => setMotivoChurn(e.target.value)}
+                className="border-zinc-800 bg-zinc-950 text-zinc-200"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" className="text-zinc-400 hover:text-white" onClick={() => setChurnDialog(null)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={confirmarChurn} disabled={!dataSaidaChurn}>
+              Confirmar churn
+              {churnDialog?.tipo === "massa" && ` (${selecionados.size} clientes)`}
             </Button>
           </DialogFooter>
         </DialogContent>

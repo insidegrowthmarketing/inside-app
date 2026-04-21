@@ -6,7 +6,6 @@
 export type Cliente = {
   id: string;
   nome: string;
-  regiao: string | null;
   fuso_horario: string | null;
   status: "a_iniciar" | "onboarding" | "ongoing" | "aviso_previo" | "churn";
   fee_mensal: number;
@@ -22,6 +21,8 @@ export type Cliente = {
   observacoes: string | null;
   pacote: "start" | "pro" | "gbp" | "ia" | null;
   moeda: "BRL" | "USD";
+  data_saida: string | null;
+  motivo_churn: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -75,38 +76,41 @@ export const FORMAS_PAGAMENTO = [
   "Zelle semanal",
 ] as const;
 
-/** Fusos horários disponíveis (cidades americanas com diferença em relação a Brasília) */
+/** Fusos horários disponíveis (cidades americanas com timezone IANA) */
 export const FUSOS_HORARIOS = [
-  // Costa Leste (-2h em relação a Brasília)
-  { value: "Atlanta, GA", label: "Atlanta, GA (-2h)", diferenca_brasilia: -2 },
-  { value: "Boca Raton, FL", label: "Boca Raton, FL (-2h)", diferenca_brasilia: -2 },
-  { value: "Boston, MA", label: "Boston, MA (-2h)", diferenca_brasilia: -2 },
-  { value: "Charlotte, NC", label: "Charlotte, NC (-2h)", diferenca_brasilia: -2 },
-  { value: "Clearwater, FL", label: "Clearwater, FL (-2h)", diferenca_brasilia: -2 },
-  { value: "Connecticut", label: "Connecticut (-2h)", diferenca_brasilia: -2 },
-  { value: "Delaware", label: "Delaware (-2h)", diferenca_brasilia: -2 },
-  { value: "Destin, FL", label: "Destin, FL (-2h)", diferenca_brasilia: -2 },
-  { value: "Fort Myers, FL", label: "Fort Myers, FL (-2h)", diferenca_brasilia: -2 },
-  { value: "Freeport, ME", label: "Freeport, ME (-2h)", diferenca_brasilia: -2 },
-  { value: "Jacksonville, FL", label: "Jacksonville, FL (-2h)", diferenca_brasilia: -2 },
-  { value: "Jacksonville, NC", label: "Jacksonville, NC (-2h)", diferenca_brasilia: -2 },
-  { value: "Manchester, NH", label: "Manchester, NH (-2h)", diferenca_brasilia: -2 },
-  { value: "Maryland", label: "Maryland (-2h)", diferenca_brasilia: -2 },
-  { value: "Massachusetts", label: "Massachusetts (-2h)", diferenca_brasilia: -2 },
-  { value: "New Jersey", label: "New Jersey (-2h)", diferenca_brasilia: -2 },
-  { value: "Orlando, FL", label: "Orlando, FL (-2h)", diferenca_brasilia: -2 },
-  { value: "Pennsylvania", label: "Pennsylvania (-2h)", diferenca_brasilia: -2 },
-  { value: "Sarasota, FL", label: "Sarasota, FL (-2h)", diferenca_brasilia: -2 },
-  { value: "South Carolina", label: "South Carolina (-2h)", diferenca_brasilia: -2 },
-  { value: "Tampa, FL", label: "Tampa, FL (-2h)", diferenca_brasilia: -2 },
-  // Mountain (-3h em relação a Brasília)
-  { value: "Draper, UT", label: "Draper, UT (-3h)", diferenca_brasilia: -3 },
-  { value: "Utah", label: "Utah (-3h)", diferenca_brasilia: -3 },
-  // Costa Oeste (-4h em relação a Brasília)
-  { value: "California", label: "California (-4h)", diferenca_brasilia: -4 },
-  { value: "Everett, WA", label: "Everett, WA (-4h)", diferenca_brasilia: -4 },
-  { value: "San Francisco, CA", label: "San Francisco, CA (-4h)", diferenca_brasilia: -4 },
-  { value: "Seattle, WA", label: "Seattle, WA (-4h)", diferenca_brasilia: -4 },
+  // Costa Leste — America/New_York
+  { value: "atlanta_ga", label: "Atlanta, GA", timezone: "America/New_York" },
+  { value: "boca_raton_fl", label: "Boca Raton, FL", timezone: "America/New_York" },
+  { value: "boston_ma", label: "Boston, MA", timezone: "America/New_York" },
+  { value: "charlotte_nc", label: "Charlotte, NC", timezone: "America/New_York" },
+  { value: "clearwater_fl", label: "Clearwater, FL", timezone: "America/New_York" },
+  { value: "connecticut", label: "Connecticut", timezone: "America/New_York" },
+  { value: "delaware", label: "Delaware", timezone: "America/New_York" },
+  { value: "destin_fl", label: "Destin, FL", timezone: "America/New_York" },
+  { value: "florida", label: "Flórida", timezone: "America/New_York" },
+  { value: "fort_myers_fl", label: "Fort Myers, FL", timezone: "America/New_York" },
+  { value: "freeport_me", label: "Freeport, ME", timezone: "America/New_York" },
+  { value: "jacksonville_fl", label: "Jacksonville, FL", timezone: "America/New_York" },
+  { value: "jacksonville_nc", label: "Jacksonville, NC", timezone: "America/New_York" },
+  { value: "manchester_nh", label: "Manchester, NH", timezone: "America/New_York" },
+  { value: "maryland", label: "Maryland", timezone: "America/New_York" },
+  { value: "massachusetts", label: "Massachusetts", timezone: "America/New_York" },
+  { value: "new_jersey", label: "New Jersey", timezone: "America/New_York" },
+  { value: "north_carolina", label: "North Carolina", timezone: "America/New_York" },
+  { value: "orlando_fl", label: "Orlando, FL", timezone: "America/New_York" },
+  { value: "pennsylvania", label: "Pennsylvania", timezone: "America/New_York" },
+  { value: "sarasota_fl", label: "Sarasota, FL", timezone: "America/New_York" },
+  { value: "south_carolina", label: "South Carolina", timezone: "America/New_York" },
+  { value: "tampa_fl", label: "Tampa, FL", timezone: "America/New_York" },
+  // Mountain — America/Denver
+  { value: "draper_ut", label: "Draper, UT", timezone: "America/Denver" },
+  { value: "utah", label: "Utah", timezone: "America/Denver" },
+  // Costa Oeste — America/Los_Angeles
+  { value: "california", label: "California", timezone: "America/Los_Angeles" },
+  { value: "everett_wa", label: "Everett, WA", timezone: "America/Los_Angeles" },
+  { value: "san_francisco_ca", label: "San Francisco, CA", timezone: "America/Los_Angeles" },
+  { value: "seattle_wa", label: "Seattle, WA", timezone: "America/Los_Angeles" },
+  { value: "washington", label: "Washington", timezone: "America/Los_Angeles" },
 ] as const;
 
 /** Pacotes disponíveis */

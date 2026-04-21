@@ -46,6 +46,7 @@ export async function atualizarCliente(id: string, formData: unknown) {
   }
 
   revalidatePath("/clientes");
+  revalidatePath("/clientes/ltv");
   revalidatePath(`/clientes/${id}`);
   redirect(`/clientes/${id}`);
 }
@@ -84,7 +85,104 @@ export async function atualizarCampoCliente(
   }
 
   revalidatePath("/clientes");
+  revalidatePath("/clientes/ltv");
   return { success: true };
+}
+
+/** Atualiza o pacote de um cliente com lógica de fim_contrato */
+export async function atualizarPacoteCliente(
+  id: string,
+  novoPacote: string
+) {
+  const supabase = await createClient();
+
+  // Buscar dados atuais do cliente para calcular fim_contrato
+  const { data: cliente, error: fetchErr } = await supabase
+    .from("clientes")
+    .select("inicio_contrato")
+    .eq("id", id)
+    .single();
+
+  if (fetchErr || !cliente) {
+    return { error: "Erro ao buscar cliente." };
+  }
+
+  const updateData: Record<string, unknown> = { pacote: novoPacote };
+
+  if (novoPacote === "start" && cliente.inicio_contrato) {
+    const inicio = new Date(cliente.inicio_contrato + "T00:00:00");
+    inicio.setDate(inicio.getDate() + 35);
+    updateData.fim_contrato = inicio.toISOString().split("T")[0];
+  } else if (novoPacote === "pro") {
+    updateData.fim_contrato = null;
+  }
+
+  const { error } = await supabase
+    .from("clientes")
+    .update(updateData)
+    .eq("id", id);
+
+  if (error) {
+    console.error("Erro ao atualizar pacote:", error);
+    return { error: "Erro ao atualizar pacote. Tente novamente." };
+  }
+
+  revalidatePath("/clientes");
+  return { success: true };
+}
+
+/** Marca um cliente como churn com data de saída e motivo */
+export async function marcarChurn(
+  id: string,
+  dataSaida: string,
+  motivoChurn: string | null
+) {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("clientes")
+    .update({
+      status: "churn",
+      data_saida: dataSaida,
+      motivo_churn: motivoChurn,
+    })
+    .eq("id", id);
+
+  if (error) {
+    console.error("Erro ao marcar churn:", error);
+    return { error: "Erro ao marcar churn. Tente novamente." };
+  }
+
+  revalidatePath("/clientes");
+  revalidatePath("/clientes/ltv");
+  return { success: true };
+}
+
+/** Marca múltiplos clientes como churn em massa */
+export async function marcarChurnEmMassa(
+  ids: string[],
+  dataSaida: string,
+  motivoChurn: string | null
+) {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("clientes")
+    .update({
+      status: "churn",
+      data_saida: dataSaida,
+      motivo_churn: motivoChurn,
+    })
+    .in("id", ids);
+
+  if (error) {
+    console.error("Erro ao marcar churn em massa:", error);
+    return { error: "Erro ao marcar churn. Tente novamente." };
+  }
+
+  revalidatePath("/clientes");
+  revalidatePath("/clientes/ltv");
+  return { success: true, count: ids.length };
 }
 
 /** Atualiza um campo em massa para múltiplos clientes */
@@ -106,6 +204,7 @@ export async function atualizarClientesEmMassa(
   }
 
   revalidatePath("/clientes");
+  revalidatePath("/clientes/ltv");
   return { success: true, count: ids.length };
 }
 

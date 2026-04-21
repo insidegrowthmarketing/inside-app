@@ -15,6 +15,7 @@ interface PageProps {
     forma_pagamento?: string;
     gestor_projetos?: string;
     gestor_trafego?: string;
+    pacote?: string;
   }>;
 }
 
@@ -25,6 +26,7 @@ export default async function ClientesPage({ searchParams }: PageProps) {
   let query = supabase
     .from("clientes")
     .select("*")
+    .neq("status", "churn")
     .order("created_at", { ascending: false });
 
   if (params.status && params.status !== "todos") {
@@ -47,6 +49,10 @@ export default async function ClientesPage({ searchParams }: PageProps) {
     query = query.eq("gestor_trafego", params.gestor_trafego);
   }
 
+  if (params.pacote && params.pacote !== "todos") {
+    query = query.eq("pacote", params.pacote);
+  }
+
   const { data: clientes, error } = await query;
 
   if (error) {
@@ -58,12 +64,13 @@ export default async function ClientesPage({ searchParams }: PageProps) {
     forma_pagamento: params.forma_pagamento || "todos",
     gestor_projetos: params.gestor_projetos || "todos",
     gestor_trafego: params.gestor_trafego || "todos",
+    pacote: params.pacote || "todos",
     busca: params.busca || "",
   };
 
   return (
     <>
-      <Header titulo="Clientes">
+      <Header titulo="Base de Clientes">
         <Link href="/clientes/novo">
           <Button size="sm" className="gap-2">
             <Plus className="h-4 w-4" />
