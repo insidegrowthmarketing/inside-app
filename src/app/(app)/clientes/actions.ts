@@ -65,6 +65,50 @@ export async function excluirCliente(id: string) {
   redirect("/clientes");
 }
 
+/** Atualiza um campo individual de um cliente (para edição inline na listagem) */
+export async function atualizarCampoCliente(
+  id: string,
+  campo: string,
+  valor: string | null
+) {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("clientes")
+    .update({ [campo]: valor })
+    .eq("id", id);
+
+  if (error) {
+    console.error(`Erro ao atualizar ${campo}:`, error);
+    return { error: `Erro ao atualizar. Tente novamente.` };
+  }
+
+  revalidatePath("/clientes");
+  return { success: true };
+}
+
+/** Atualiza um campo em massa para múltiplos clientes */
+export async function atualizarClientesEmMassa(
+  ids: string[],
+  campo: string,
+  valor: string | null
+) {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("clientes")
+    .update({ [campo]: valor })
+    .in("id", ids);
+
+  if (error) {
+    console.error(`Erro ao atualizar em massa:`, error);
+    return { error: "Erro ao atualizar clientes. Tente novamente." };
+  }
+
+  revalidatePath("/clientes");
+  return { success: true, count: ids.length };
+}
+
 /** Remove strings vazias para enviar null ao banco */
 function limparDadosVazios(dados: Record<string, unknown>) {
   const limpo: Record<string, unknown> = {};

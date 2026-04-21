@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -28,6 +29,8 @@ import {
   GESTORES_TRAFEGO,
   FORMAS_PAGAMENTO,
   FUSOS_HORARIOS,
+  PACOTES,
+  MOEDAS,
 } from "@/types/cliente";
 import type { Cliente } from "@/types/cliente";
 
@@ -54,6 +57,7 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
           regiao: cliente.regiao || "",
           fuso_horario: cliente.fuso_horario || "",
           fee_mensal: Number(cliente.fee_mensal),
+          moeda: cliente.moeda || "BRL",
           forma_pagamento: cliente.forma_pagamento || "",
           inicio_contrato: cliente.inicio_contrato || "",
           fim_contrato: cliente.fim_contrato || "",
@@ -62,15 +66,37 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
           gestor_trafego: cliente.gestor_trafego || "",
           responsavel_financeiro: cliente.responsavel_financeiro || "",
           contato_financeiro: cliente.contato_financeiro || "",
-          usa_crm: cliente.usa_crm,
+          contempla_ghl: cliente.contempla_ghl,
           observacoes: cliente.observacoes || "",
+          pacote: cliente.pacote || "start",
         }
       : {
           status: "a_iniciar",
           fee_mensal: 0,
-          usa_crm: false,
+          moeda: "BRL",
+          contempla_ghl: false,
+          pacote: "start",
         },
   });
+
+  const pacote = watch("pacote");
+  const inicioContrato = watch("inicio_contrato");
+
+  // Lógica automática do pacote
+  useEffect(() => {
+    if (!pacote) return;
+
+    if (pacote === "start" && inicioContrato) {
+      const inicio = new Date(inicioContrato + "T00:00:00");
+      inicio.setDate(inicio.getDate() + 35);
+      const fim = inicio.toISOString().split("T")[0];
+      setValue("fim_contrato", fim);
+    } else if (pacote === "pro") {
+      setValue("fim_contrato", "");
+    }
+  }, [pacote, inicioContrato, setValue]);
+
+  const isPacotePro = pacote === "pro";
 
   const onSubmit = async (dados: ClienteFormData) => {
     const resultado = modoEdicao
@@ -150,8 +176,8 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
               </SelectTrigger>
               <SelectContent className="border-zinc-800 bg-zinc-950">
                 {FUSOS_HORARIOS.map((f) => (
-                  <SelectItem key={f} value={f}>
-                    {f}
+                  <SelectItem key={f.value} value={f.value}>
+                    {f.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -169,16 +195,55 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="space-y-2">
-            <Label htmlFor="fee_mensal">Fee mensal (R$) *</Label>
-            <Input
-              id="fee_mensal"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0,00"
-              className="border-zinc-800 bg-zinc-950 text-zinc-200"
-              {...register("fee_mensal", { valueAsNumber: true })}
-            />
+            <Label>Pacote *</Label>
+            <Select
+              value={watch("pacote")}
+              onValueChange={(v) => { if (v) setValue("pacote", v as ClienteFormData["pacote"]); }}
+            >
+              <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200">
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent className="border-zinc-800 bg-zinc-950">
+                {PACOTES.map((p) => (
+                  <SelectItem key={p.value} value={p.value}>
+                    {p.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.pacote && (
+              <p className="text-xs text-red-400">{errors.pacote.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="fee_mensal">Fee mensal *</Label>
+            <div className="flex gap-2">
+              <Input
+                id="fee_mensal"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0,00"
+                className="border-zinc-800 bg-zinc-950 text-zinc-200 flex-[7]"
+                {...register("fee_mensal", { valueAsNumber: true })}
+              />
+              <Select
+                value={watch("moeda")}
+                onValueChange={(v) => { if (v) setValue("moeda", v as ClienteFormData["moeda"]); }}
+              >
+                <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200 flex-[3]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="border-zinc-800 bg-zinc-950">
+                  {MOEDAS.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>
+                      {m.label} {m.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             {errors.fee_mensal && (
               <p className="text-xs text-red-400">{errors.fee_mensal.message}</p>
             )}
@@ -235,8 +300,12 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
               id="fim_contrato"
               type="date"
               className="border-zinc-800 bg-zinc-950 text-zinc-200"
+              disabled={isPacotePro}
               {...register("fim_contrato")}
             />
+            {isPacotePro && (
+              <p className="text-xs text-zinc-500">Pacote PRO não possui fim de contrato</p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -325,22 +394,22 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
         </CardContent>
       </Card>
 
-      {/* Seção 5: Outros */}
+      {/* Seção 5: GHL e Observações */}
       <Card className="border-zinc-800 bg-zinc-900">
         <CardHeader>
           <CardTitle className="text-sm font-medium text-zinc-300">
-            Outros
+            GHL e Observações
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-3">
             <Switch
-              id="usa_crm"
-              checked={watch("usa_crm")}
-              onCheckedChange={(checked) => setValue("usa_crm", checked)}
+              id="contempla_ghl"
+              checked={watch("contempla_ghl")}
+              onCheckedChange={(checked) => setValue("contempla_ghl", checked)}
             />
-            <Label htmlFor="usa_crm" className="cursor-pointer">
-              Usa Go High Level (CRM)
+            <Label htmlFor="contempla_ghl" className="cursor-pointer">
+              Contempla GHL no pacote
             </Label>
           </div>
 

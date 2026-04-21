@@ -1,8 +1,8 @@
-/** Formata um valor numérico como moeda brasileira (R$) */
-export function formatarMoeda(valor: number): string {
-  return new Intl.NumberFormat("pt-BR", {
+/** Formata um valor numérico como moeda */
+export function formatarMoeda(valor: number, moeda: "BRL" | "USD" = "BRL"): string {
+  return new Intl.NumberFormat(moeda === "BRL" ? "pt-BR" : "en-US", {
     style: "currency",
-    currency: "BRL",
+    currency: moeda,
   }).format(valor);
 }
 

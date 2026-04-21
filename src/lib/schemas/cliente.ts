@@ -9,6 +9,7 @@ export const clienteSchema = z.object({
   regiao: z.string(),
   fuso_horario: z.string(),
   fee_mensal: z.number({ message: "Fee é obrigatório" }).min(0, "Fee deve ser positivo"),
+  moeda: z.enum(["BRL", "USD"], { message: "Moeda é obrigatória" }),
   forma_pagamento: z.string(),
   inicio_contrato: z.string().min(1, "Data de início é obrigatória"),
   fim_contrato: z.string(),
@@ -17,8 +18,9 @@ export const clienteSchema = z.object({
   gestor_trafego: z.string().min(1, "Gestor de tráfego é obrigatório"),
   responsavel_financeiro: z.string(),
   contato_financeiro: z.string(),
-  usa_crm: z.boolean(),
+  contempla_ghl: z.boolean(),
   observacoes: z.string(),
+  pacote: z.enum(["start", "pro", "gbp", "ia"], { message: "Pacote é obrigatório" }),
 });
 
 export type ClienteFormData = z.infer<typeof clienteSchema>;

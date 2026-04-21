@@ -1,31 +1,27 @@
 import Link from "next/link";
-import { Plus, Search, Users } from "lucide-react";
+import { Plus, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/header";
-import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { formatarMoeda, formatarData } from "@/lib/formatters";
-import { STATUS_CLIENTE } from "@/types/cliente";
 import { ClientesFilters } from "./filters";
+import { TabelaClientes } from "./tabela-clientes";
+import type { Cliente } from "@/types/cliente";
 
 interface PageProps {
-  searchParams: Promise<{ status?: string; busca?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    busca?: string;
+    forma_pagamento?: string;
+    gestor_projetos?: string;
+    gestor_trafego?: string;
+  }>;
 }
 
 export default async function ClientesPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const supabase = await createClient();
 
-  // Monta a query com filtros
   let query = supabase
     .from("clientes")
     .select("*")
@@ -39,11 +35,31 @@ export default async function ClientesPage({ searchParams }: PageProps) {
     query = query.ilike("nome", `%${params.busca}%`);
   }
 
+  if (params.forma_pagamento && params.forma_pagamento !== "todos") {
+    query = query.eq("forma_pagamento", params.forma_pagamento);
+  }
+
+  if (params.gestor_projetos && params.gestor_projetos !== "todos") {
+    query = query.eq("gestor_projetos", params.gestor_projetos);
+  }
+
+  if (params.gestor_trafego && params.gestor_trafego !== "todos") {
+    query = query.eq("gestor_trafego", params.gestor_trafego);
+  }
+
   const { data: clientes, error } = await query;
 
   if (error) {
     console.error("Erro ao buscar clientes:", error);
   }
+
+  const filtros = {
+    status: params.status || "todos",
+    forma_pagamento: params.forma_pagamento || "todos",
+    gestor_projetos: params.gestor_projetos || "todos",
+    gestor_trafego: params.gestor_trafego || "todos",
+    busca: params.busca || "",
+  };
 
   return (
     <>
@@ -57,13 +73,8 @@ export default async function ClientesPage({ searchParams }: PageProps) {
       </Header>
 
       <div className="space-y-4 p-6">
-        {/* Filtros */}
-        <ClientesFilters
-          statusAtual={params.status || "todos"}
-          buscaAtual={params.busca || ""}
-        />
+        <ClientesFilters filtros={filtros} />
 
-        {/* Tabela ou estado vazio */}
         {!clientes || clientes.length === 0 ? (
           <Card className="border-zinc-800 bg-zinc-900">
             <CardContent className="flex flex-col items-center justify-center py-16">
@@ -87,52 +98,7 @@ export default async function ClientesPage({ searchParams }: PageProps) {
             </CardContent>
           </Card>
         ) : (
-          <Card className="border-zinc-800 bg-zinc-900">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-zinc-800 hover:bg-transparent">
-                  <TableHead className="text-zinc-400">Nome</TableHead>
-                  <TableHead className="text-zinc-400">Status</TableHead>
-                  <TableHead className="text-zinc-400">Fee mensal</TableHead>
-                  <TableHead className="text-zinc-400">Gestor de projetos</TableHead>
-                  <TableHead className="text-zinc-400">Gestor de tráfego</TableHead>
-                  <TableHead className="text-zinc-400">Início contrato</TableHead>
-                  <TableHead className="text-zinc-400 text-right">Ação</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {clientes.map((cliente) => (
-                  <TableRow key={cliente.id} className="border-zinc-800 hover:bg-zinc-800/50">
-                    <TableCell className="font-medium text-zinc-200">
-                      {cliente.nome}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={cliente.status} />
-                    </TableCell>
-                    <TableCell className="text-zinc-300">
-                      {formatarMoeda(Number(cliente.fee_mensal))}
-                    </TableCell>
-                    <TableCell className="text-zinc-400">
-                      {cliente.gestor_projetos || "—"}
-                    </TableCell>
-                    <TableCell className="text-zinc-400">
-                      {cliente.gestor_trafego || "—"}
-                    </TableCell>
-                    <TableCell className="text-zinc-400">
-                      {formatarData(cliente.inicio_contrato)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Link href={`/clientes/${cliente.id}`}>
-                        <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white">
-                          Ver
-                        </Button>
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
+          <TabelaClientes clientes={clientes as Cliente[]} />
         )}
       </div>
     </>

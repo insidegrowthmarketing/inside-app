@@ -18,8 +18,10 @@ export type Cliente = {
   gestor_trafego: string | null;
   responsavel_financeiro: string | null;
   contato_financeiro: string | null;
-  usa_crm: boolean;
+  contempla_ghl: boolean;
   observacoes: string | null;
+  pacote: "start" | "pro" | "gbp" | "ia" | null;
+  moeda: "BRL" | "USD";
   created_at: string;
   updated_at: string;
 };
@@ -57,22 +59,66 @@ export const GESTORES_TRAFEGO = [
   "Ana Luiza",
   "Lucas",
   "Rodrigo",
-  "Mirella",
+  "Gabriel Samara",
   "Luiz Felipe",
 ] as const;
 
 /** Formas de pagamento aceitas */
 export const FORMAS_PAGAMENTO = [
-  "PIX",
-  "Boleto",
-  "Cartão",
-  "Transferência",
+  "Stripe Brasil mensal",
+  "Stripe Brasil semanal",
+  "Stripe EUA mensal",
+  "Stripe EUA semanal",
+  "Transferência BOFA quinzenal",
+  "Zelle mensal",
+  "Zelle quinzenal",
+  "Zelle semanal",
 ] as const;
 
-/** Fusos horários disponíveis */
+/** Fusos horários disponíveis (cidades americanas com diferença em relação a Brasília) */
 export const FUSOS_HORARIOS = [
-  "GMT-2",
-  "GMT-3 (Brasília)",
-  "GMT-4",
-  "GMT-5",
+  // Costa Leste (-2h em relação a Brasília)
+  { value: "Atlanta, GA", label: "Atlanta, GA (-2h)", diferenca_brasilia: -2 },
+  { value: "Boca Raton, FL", label: "Boca Raton, FL (-2h)", diferenca_brasilia: -2 },
+  { value: "Boston, MA", label: "Boston, MA (-2h)", diferenca_brasilia: -2 },
+  { value: "Charlotte, NC", label: "Charlotte, NC (-2h)", diferenca_brasilia: -2 },
+  { value: "Clearwater, FL", label: "Clearwater, FL (-2h)", diferenca_brasilia: -2 },
+  { value: "Connecticut", label: "Connecticut (-2h)", diferenca_brasilia: -2 },
+  { value: "Delaware", label: "Delaware (-2h)", diferenca_brasilia: -2 },
+  { value: "Destin, FL", label: "Destin, FL (-2h)", diferenca_brasilia: -2 },
+  { value: "Fort Myers, FL", label: "Fort Myers, FL (-2h)", diferenca_brasilia: -2 },
+  { value: "Freeport, ME", label: "Freeport, ME (-2h)", diferenca_brasilia: -2 },
+  { value: "Jacksonville, FL", label: "Jacksonville, FL (-2h)", diferenca_brasilia: -2 },
+  { value: "Jacksonville, NC", label: "Jacksonville, NC (-2h)", diferenca_brasilia: -2 },
+  { value: "Manchester, NH", label: "Manchester, NH (-2h)", diferenca_brasilia: -2 },
+  { value: "Maryland", label: "Maryland (-2h)", diferenca_brasilia: -2 },
+  { value: "Massachusetts", label: "Massachusetts (-2h)", diferenca_brasilia: -2 },
+  { value: "New Jersey", label: "New Jersey (-2h)", diferenca_brasilia: -2 },
+  { value: "Orlando, FL", label: "Orlando, FL (-2h)", diferenca_brasilia: -2 },
+  { value: "Pennsylvania", label: "Pennsylvania (-2h)", diferenca_brasilia: -2 },
+  { value: "Sarasota, FL", label: "Sarasota, FL (-2h)", diferenca_brasilia: -2 },
+  { value: "South Carolina", label: "South Carolina (-2h)", diferenca_brasilia: -2 },
+  { value: "Tampa, FL", label: "Tampa, FL (-2h)", diferenca_brasilia: -2 },
+  // Mountain (-3h em relação a Brasília)
+  { value: "Draper, UT", label: "Draper, UT (-3h)", diferenca_brasilia: -3 },
+  { value: "Utah", label: "Utah (-3h)", diferenca_brasilia: -3 },
+  // Costa Oeste (-4h em relação a Brasília)
+  { value: "California", label: "California (-4h)", diferenca_brasilia: -4 },
+  { value: "Everett, WA", label: "Everett, WA (-4h)", diferenca_brasilia: -4 },
+  { value: "San Francisco, CA", label: "San Francisco, CA (-4h)", diferenca_brasilia: -4 },
+  { value: "Seattle, WA", label: "Seattle, WA (-4h)", diferenca_brasilia: -4 },
+] as const;
+
+/** Pacotes disponíveis */
+export const PACOTES = [
+  { value: "start", label: "Start", dias_contrato: 35 },
+  { value: "pro", label: "PRO", dias_contrato: null },
+  { value: "gbp", label: "GBP", dias_contrato: null },
+  { value: "ia", label: "IA", dias_contrato: null },
+] as const;
+
+/** Moedas aceitas */
+export const MOEDAS = [
+  { value: "BRL", label: "R$", nome: "Real" },
+  { value: "USD", label: "US$", nome: "Dólar" },
 ] as const;
