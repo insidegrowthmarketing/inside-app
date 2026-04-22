@@ -13,6 +13,8 @@ export const clienteSchema = z.object({
   inicio_contrato: z.string().min(1, "Data de início é obrigatória"),
   fim_contrato: z.string(),
   data_pagamento: z.number().int().min(1).max(31).nullable(),
+  dia_semana_pagamento: z.number().int().min(0).max(6).nullable(),
+  dias_pagamento_quinzenal: z.array(z.number().int().min(1).max(31)).nullable(),
   gestor_projetos: z.string().min(1, "Gestor de projetos é obrigatório"),
   gestor_trafego: z.string().min(1, "Gestor de tráfego é obrigatório"),
   responsavel_financeiro: z.string(),

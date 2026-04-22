@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { clienteSchema } from "@/lib/schemas/cliente";
 
-/** Cria um novo cliente no Supabase */
+/** Cria um novo cliente no Supabase e retorna o ID (sem redirecionar) */
 export async function criarCliente(formData: unknown) {
   const parsed = clienteSchema.safeParse(formData);
 
@@ -16,15 +16,15 @@ export async function criarCliente(formData: unknown) {
   const supabase = await createClient();
   const dados = limparDadosVazios(parsed.data);
 
-  const { error } = await supabase.from("clientes").insert(dados);
+  const { data, error } = await supabase.from("clientes").insert(dados).select("id").single();
 
-  if (error) {
+  if (error || !data) {
     console.error("Erro ao criar cliente:", error);
     return { error: "Erro ao salvar cliente. Tente novamente." };
   }
 
   revalidatePath("/clientes");
-  redirect("/clientes");
+  return { clienteId: data.id };
 }
 
 /** Atualiza um cliente existente no Supabase */

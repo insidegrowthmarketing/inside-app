@@ -30,7 +30,10 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { clienteSchema, type ClienteFormData } from "@/lib/schemas/cliente";
 import { criarCliente, atualizarCliente } from "@/app/(app)/clientes/actions";
+import { gerarFaturasRetroativas } from "@/app/(app)/financeiro/actions";
 import { formatarFusoHorario } from "@/lib/fuso-horario";
+import { getFrequenciaDaFormaPagamento } from "@/lib/faturas";
+import { DIAS_SEMANA } from "@/types/fatura";
 import {
   STATUS_CLIENTE,
   GESTORES_PROJETOS,
@@ -70,6 +73,8 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
           inicio_contrato: cliente.inicio_contrato || "",
           fim_contrato: cliente.fim_contrato || "",
           data_pagamento: cliente.data_pagamento,
+          dia_semana_pagamento: cliente.dia_semana_pagamento,
+          dias_pagamento_quinzenal: cliente.dias_pagamento_quinzenal,
           gestor_projetos: cliente.gestor_projetos || "",
           gestor_trafego: cliente.gestor_trafego || "",
           responsavel_financeiro: cliente.responsavel_financeiro || "",
@@ -88,11 +93,16 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
           pacote: "start",
           data_saida: null,
           motivo_churn: null,
+          data_pagamento: null,
+          dia_semana_pagamento: null,
+          dias_pagamento_quinzenal: null,
         },
   });
 
   const pacote = watch("pacote");
   const inicioContrato = watch("inicio_contrato");
+  const formaPagamento = watch("forma_pagamento");
+  const frequencia = getFrequenciaDaFormaPagamento(formaPagamento || null);
 
   // Dialog de churn
   const [churnDialogAberto, setChurnDialogAberto] = useState(false);
@@ -100,10 +110,15 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
   const [motivoChurn, setMotivoChurn] = useState("");
   const [statusAnterior, setStatusAnterior] = useState(cliente?.status || "a_iniciar");
 
+  // Dialog de geração de faturas (pós-criação)
+  const [faturasDialogAberto, setFaturasDialogAberto] = useState(false);
+  const [novoClienteId, setNovoClienteId] = useState<string | null>(null);
+  const [novoClienteInicioContrato, setNovoClienteInicioContrato] = useState("");
+  const [gerandoFaturas, setGerandoFaturas] = useState(false);
+
   // Lógica automática do pacote
   useEffect(() => {
     if (!pacote) return;
-
     if (pacote === "start" && inicioContrato) {
       const inicio = new Date(inicioContrato + "T00:00:00");
       inicio.setDate(inicio.getDate() + 35);
@@ -114,6 +129,20 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
     }
   }, [pacote, inicioContrato, setValue]);
 
+  // Resetar campos de dia ao mudar frequência
+  useEffect(() => {
+    if (frequencia === "mensal") {
+      setValue("dia_semana_pagamento", null);
+      setValue("dias_pagamento_quinzenal", null);
+    } else if (frequencia === "semanal") {
+      setValue("data_pagamento", null);
+      setValue("dias_pagamento_quinzenal", null);
+    } else if (frequencia === "quinzenal") {
+      setValue("data_pagamento", null);
+      setValue("dia_semana_pagamento", null);
+    }
+  }, [frequencia, setValue]);
+
   const isPacotePro = pacote === "pro";
 
   function handleStatusChange(novoStatus: string) {
@@ -122,7 +151,6 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
       setChurnDialogAberto(true);
     } else {
       setValue("status", novoStatus as ClienteFormData["status"]);
-      // Limpar dados de churn se saiu do status churn
       setValue("data_saida", null);
       setValue("motivo_churn", null);
     }
@@ -141,16 +169,57 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
   }
 
   const onSubmit = async (dados: ClienteFormData) => {
-    const resultado = modoEdicao
-      ? await atualizarCliente(cliente!.id, dados)
-      : await criarCliente(dados);
-
-    if (resultado?.error) {
-      toast.error(resultado.error);
+    if (modoEdicao) {
+      const resultado = await atualizarCliente(cliente!.id, dados);
+      if (resultado?.error) {
+        toast.error(resultado.error);
+      } else {
+        toast.success("Cliente atualizado!");
+      }
     } else {
-      toast.success(modoEdicao ? "Cliente atualizado!" : "Cliente cadastrado!");
+      const resultado = await criarCliente(dados);
+      if (resultado?.error) {
+        toast.error(resultado.error);
+        return;
+      }
+      if ("clienteId" in resultado && resultado.clienteId) {
+        toast.success("Cliente cadastrado!");
+        setNovoClienteId(resultado.clienteId);
+        setNovoClienteInicioContrato(dados.inicio_contrato);
+        setFaturasDialogAberto(true);
+      }
     }
   };
+
+  async function handleGerarFaturas(retroativas: boolean) {
+    if (!novoClienteId) return;
+    setGerandoFaturas(true);
+
+    const hoje = new Date().toISOString().split("T")[0];
+    const dataInicio = retroativas ? novoClienteInicioContrato : hoje;
+    // Gerar faturas até o fim do mês seguinte para cobrir o próximo ciclo
+    const fimProximoMes = new Date();
+    fimProximoMes.setMonth(fimProximoMes.getMonth() + 1);
+    fimProximoMes.setDate(0); // último dia do mês atual se não retroativas, ou...
+    const fimMesAtual = new Date();
+    fimMesAtual.setMonth(fimMesAtual.getMonth() + 1, 0);
+    const dataFim = fimMesAtual.toISOString().split("T")[0];
+
+    const resultado = await gerarFaturasRetroativas(novoClienteId, dataInicio, dataFim);
+
+    if ("error" in resultado && resultado.error) {
+      toast.error(resultado.error);
+    } else {
+      toast.success(`${resultado.count} fatura${resultado.count !== 1 ? "s" : ""} gerada${resultado.count !== 1 ? "s" : ""}`);
+    }
+
+    setGerandoFaturas(false);
+    setFaturasDialogAberto(false);
+    router.push("/clientes");
+  }
+
+  // Valores do quinzenal para os inputs controlados
+  const quinzenal = watch("dias_pagamento_quinzenal");
 
   return (
     <>
@@ -187,9 +256,7 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
                 </SelectTrigger>
                 <SelectContent className="border-zinc-800 bg-zinc-950">
                   {STATUS_CLIENTE.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label}
-                    </SelectItem>
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -238,9 +305,7 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
                 </SelectTrigger>
                 <SelectContent className="border-zinc-800 bg-zinc-950">
                   {PACOTES.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>
-                      {p.label}
-                    </SelectItem>
+                    <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -270,9 +335,7 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
                   </SelectTrigger>
                   <SelectContent className="border-zinc-800 bg-zinc-950">
                     {MOEDAS.map((m) => (
-                      <SelectItem key={m.value} value={m.value}>
-                        {m.label} {m.nome}
-                      </SelectItem>
+                      <SelectItem key={m.value} value={m.value}>{m.label} {m.nome}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -293,26 +356,97 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
                 </SelectTrigger>
                 <SelectContent className="border-zinc-800 bg-zinc-950">
                   {FORMAS_PAGAMENTO.map((f) => (
-                    <SelectItem key={f} value={f}>
-                      {f}
-                    </SelectItem>
+                    <SelectItem key={f} value={f}>{f}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="data_pagamento">Dia do pagamento</Label>
-              <Input
-                id="data_pagamento"
-                type="number"
-                min="1"
-                max="31"
-                placeholder="Ex: 10"
-                className="border-zinc-800 bg-zinc-950 text-zinc-200"
-                {...register("data_pagamento", { valueAsNumber: true })}
-              />
-            </div>
+            {/* Campo de dia condicional à frequência */}
+            {frequencia === "mensal" && (
+              <div className="space-y-2">
+                <Label htmlFor="data_pagamento">Dia do pagamento</Label>
+                <Input
+                  id="data_pagamento"
+                  type="number"
+                  min="1"
+                  max="31"
+                  placeholder="Ex: 10"
+                  className="border-zinc-800 bg-zinc-950 text-zinc-200"
+                  {...register("data_pagamento", { valueAsNumber: true })}
+                />
+              </div>
+            )}
+
+            {frequencia === "semanal" && (
+              <div className="space-y-2">
+                <Label>Dia da semana do pagamento</Label>
+                <Select
+                  value={watch("dia_semana_pagamento")?.toString() ?? ""}
+                  onValueChange={(v) => { if (v) setValue("dia_semana_pagamento", Number(v)); }}
+                >
+                  <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent className="border-zinc-800 bg-zinc-950">
+                    {DIAS_SEMANA.map((d) => (
+                      <SelectItem key={d.value} value={d.value.toString()}>{d.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {frequencia === "quinzenal" && (
+              <>
+                <div className="space-y-2">
+                  <Label>1o dia do mês</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="31"
+                    placeholder="Ex: 1"
+                    className="border-zinc-800 bg-zinc-950 text-zinc-200"
+                    value={quinzenal?.[0] ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value ? Number(e.target.value) : 1;
+                      setValue("dias_pagamento_quinzenal", [v, quinzenal?.[1] ?? 15]);
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>2o dia do mês</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="31"
+                    placeholder="Ex: 15"
+                    className="border-zinc-800 bg-zinc-950 text-zinc-200"
+                    value={quinzenal?.[1] ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value ? Number(e.target.value) : 15;
+                      setValue("dias_pagamento_quinzenal", [quinzenal?.[0] ?? 1, v]);
+                    }}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Se nenhuma frequência, mostrar dia do pagamento genérico */}
+            {!frequencia && (
+              <div className="space-y-2">
+                <Label htmlFor="data_pagamento_gen">Dia do pagamento</Label>
+                <Input
+                  id="data_pagamento_gen"
+                  type="number"
+                  min="1"
+                  max="31"
+                  placeholder="Ex: 10"
+                  className="border-zinc-800 bg-zinc-950 text-zinc-200"
+                  {...register("data_pagamento", { valueAsNumber: true })}
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="inicio_contrato">Início do contrato *</Label>
@@ -346,83 +480,45 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
         {/* Seção 3: Responsáveis internos */}
         <Card className="border-zinc-800 bg-zinc-900">
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-zinc-300">
-              Responsáveis internos
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-zinc-300">Responsáveis internos</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Gestor de projetos *</Label>
-              <Select
-                value={watch("gestor_projetos") || ""}
-                onValueChange={(v) => setValue("gestor_projetos", v ?? "")}
-              >
-                <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
+              <Select value={watch("gestor_projetos") || ""} onValueChange={(v) => setValue("gestor_projetos", v ?? "")}>
+                <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200"><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent className="border-zinc-800 bg-zinc-950">
-                  {GESTORES_PROJETOS.map((g) => (
-                    <SelectItem key={g} value={g}>
-                      {g}
-                    </SelectItem>
-                  ))}
+                  {GESTORES_PROJETOS.map((g) => (<SelectItem key={g} value={g}>{g}</SelectItem>))}
                 </SelectContent>
               </Select>
-              {errors.gestor_projetos && (
-                <p className="text-xs text-red-400">{errors.gestor_projetos.message}</p>
-              )}
+              {errors.gestor_projetos && (<p className="text-xs text-red-400">{errors.gestor_projetos.message}</p>)}
             </div>
-
             <div className="space-y-2">
               <Label>Gestor de tráfego *</Label>
-              <Select
-                value={watch("gestor_trafego") || ""}
-                onValueChange={(v) => setValue("gestor_trafego", v ?? "")}
-              >
-                <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
+              <Select value={watch("gestor_trafego") || ""} onValueChange={(v) => setValue("gestor_trafego", v ?? "")}>
+                <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200"><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent className="border-zinc-800 bg-zinc-950">
-                  {GESTORES_TRAFEGO.map((g) => (
-                    <SelectItem key={g} value={g}>
-                      {g}
-                    </SelectItem>
-                  ))}
+                  {GESTORES_TRAFEGO.map((g) => (<SelectItem key={g} value={g}>{g}</SelectItem>))}
                 </SelectContent>
               </Select>
-              {errors.gestor_trafego && (
-                <p className="text-xs text-red-400">{errors.gestor_trafego.message}</p>
-              )}
+              {errors.gestor_trafego && (<p className="text-xs text-red-400">{errors.gestor_trafego.message}</p>)}
             </div>
           </CardContent>
         </Card>
 
-        {/* Seção 4: Responsável financeiro do cliente */}
+        {/* Seção 4: Responsável financeiro */}
         <Card className="border-zinc-800 bg-zinc-900">
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-zinc-300">
-              Responsável financeiro do cliente
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-zinc-300">Responsável financeiro do cliente</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="responsavel_financeiro">Nome</Label>
-              <Input
-                id="responsavel_financeiro"
-                placeholder="Nome do responsável"
-                className="border-zinc-800 bg-zinc-950 text-zinc-200"
-                {...register("responsavel_financeiro")}
-              />
+              <Input id="responsavel_financeiro" placeholder="Nome do responsável" className="border-zinc-800 bg-zinc-950 text-zinc-200" {...register("responsavel_financeiro")} />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="contato_financeiro">Contato (email/telefone)</Label>
-              <Input
-                id="contato_financeiro"
-                placeholder="Email ou telefone"
-                className="border-zinc-800 bg-zinc-950 text-zinc-200"
-                {...register("contato_financeiro")}
-              />
+              <Input id="contato_financeiro" placeholder="Email ou telefone" className="border-zinc-800 bg-zinc-950 text-zinc-200" {...register("contato_financeiro")} />
             </div>
           </CardContent>
         </Card>
@@ -430,45 +526,23 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
         {/* Seção 5: GHL e Observações */}
         <Card className="border-zinc-800 bg-zinc-900">
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-zinc-300">
-              GHL e Observações
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-zinc-300">GHL e Observações</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3">
-              <Switch
-                id="contempla_ghl"
-                checked={watch("contempla_ghl")}
-                onCheckedChange={(checked) => setValue("contempla_ghl", checked)}
-              />
-              <Label htmlFor="contempla_ghl" className="cursor-pointer">
-                Contempla GHL no pacote
-              </Label>
+              <Switch id="contempla_ghl" checked={watch("contempla_ghl")} onCheckedChange={(checked) => setValue("contempla_ghl", checked)} />
+              <Label htmlFor="contempla_ghl" className="cursor-pointer">Contempla GHL no pacote</Label>
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="observacoes">Observações</Label>
-              <Textarea
-                id="observacoes"
-                placeholder="Anotações adicionais sobre o cliente..."
-                rows={4}
-                className="border-zinc-800 bg-zinc-950 text-zinc-200"
-                {...register("observacoes")}
-              />
+              <Textarea id="observacoes" placeholder="Anotações adicionais sobre o cliente..." rows={4} className="border-zinc-800 bg-zinc-950 text-zinc-200" {...register("observacoes")} />
             </div>
           </CardContent>
         </Card>
 
         {/* Botões de ação */}
         <div className="flex items-center justify-end gap-3">
-          <Button
-            type="button"
-            variant="ghost"
-            className="text-zinc-400 hover:text-white"
-            onClick={() => router.push("/clientes")}
-          >
-            Cancelar
-          </Button>
+          <Button type="button" variant="ghost" className="text-zinc-400 hover:text-white" onClick={() => router.push("/clientes")}>Cancelar</Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {modoEdicao ? "Salvar alterações" : "Salvar cliente"}
@@ -485,34 +559,56 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="data_saida_churn">Data de saída *</Label>
-              <Input
-                id="data_saida_churn"
-                type="date"
-                value={dataSaidaChurn}
-                onChange={(e) => setDataSaidaChurn(e.target.value)}
-                className="border-zinc-800 bg-zinc-950 text-zinc-200"
-              />
+              <Input id="data_saida_churn" type="date" value={dataSaidaChurn} onChange={(e) => setDataSaidaChurn(e.target.value)} className="border-zinc-800 bg-zinc-950 text-zinc-200" />
             </div>
             <div className="space-y-2">
               <Label>Motivo do churn</Label>
               <Select value={motivoChurn} onValueChange={(v) => { if (v) setMotivoChurn(v); }}>
-                <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200">
-                  <SelectValue placeholder="— Selecione —" />
-                </SelectTrigger>
+                <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200"><SelectValue placeholder="— Selecione —" /></SelectTrigger>
                 <SelectContent className="border-zinc-800 bg-zinc-950">
-                  {MOTIVOS_CHURN.map((m) => (
-                    <SelectItem key={m} value={m}>{m}</SelectItem>
-                  ))}
+                  {MOTIVOS_CHURN.map((m) => (<SelectItem key={m} value={m}>{m}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="ghost" className="text-zinc-400 hover:text-white" onClick={cancelarChurn}>
-              Cancelar
+            <Button variant="ghost" className="text-zinc-400 hover:text-white" onClick={cancelarChurn}>Cancelar</Button>
+            <Button variant="destructive" onClick={confirmarChurn} disabled={!dataSaidaChurn}>Confirmar churn</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de geração de faturas (após criação de cliente) */}
+      <Dialog open={faturasDialogAberto} onOpenChange={() => {}}>
+        <DialogContent className="border-zinc-800 bg-zinc-900">
+          <DialogHeader>
+            <DialogTitle className="text-zinc-200">Gerar faturas</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-zinc-300">
+              Cliente criado com sucesso! Deseja gerar faturas retroativas desde{" "}
+              <strong className="text-zinc-200">
+                {novoClienteInicioContrato
+                  ? new Date(novoClienteInicioContrato + "T00:00:00").toLocaleDateString("pt-BR")
+                  : "—"}
+              </strong>?
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="ghost"
+              className="text-zinc-400 hover:text-white"
+              onClick={() => handleGerarFaturas(false)}
+              disabled={gerandoFaturas}
+            >
+              Não, só futuras
             </Button>
-            <Button variant="destructive" onClick={confirmarChurn} disabled={!dataSaidaChurn}>
-              Confirmar churn
+            <Button
+              onClick={() => handleGerarFaturas(true)}
+              disabled={gerandoFaturas}
+            >
+              {gerandoFaturas && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Sim, gerar retroativas
             </Button>
           </DialogFooter>
         </DialogContent>

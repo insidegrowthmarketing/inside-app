@@ -23,6 +23,8 @@ export type Cliente = {
   moeda: "BRL" | "USD";
   data_saida: string | null;
   motivo_churn: string | null;
+  dia_semana_pagamento: number | null;
+  dias_pagamento_quinzenal: number[] | null;
   created_at: string;
   updated_at: string;
 };

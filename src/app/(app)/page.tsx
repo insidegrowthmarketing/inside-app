@@ -5,9 +5,11 @@ import {
   AlertTriangle,
   TrendingDown,
   DollarSign,
+  Clock,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/header";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
 import { formatarMoeda, formatarData } from "@/lib/formatters";
@@ -29,6 +31,9 @@ export default async function DashboardPage() {
     .select("*")
     .neq("status", "churn")
     .order("created_at", { ascending: false });
+
+  // Data base
+  const hoje = new Date();
 
   // Buscar churns do mês atual
   const inicioMes = new Date();
@@ -60,6 +65,22 @@ export default async function DashboardPage() {
     .reduce((acc, c) => acc + Number(c.fee_mensal), 0);
 
   const churnCount = churnsDoMes?.length ?? 0;
+
+  // Faturas atrasadas
+  const hojeStr = hoje.toISOString().split("T")[0];
+  const { data: faturasAtrasadas } = await supabase
+    .from("faturas")
+    .select("valor, moeda")
+    .eq("status", "pendente")
+    .lt("data_vencimento", hojeStr);
+
+  const atrasadoBRL = (faturasAtrasadas ?? [])
+    .filter((f) => f.moeda === "BRL")
+    .reduce((a, f) => a + Number(f.valor), 0);
+  const atrasadoUSD = (faturasAtrasadas ?? [])
+    .filter((f) => f.moeda === "USD")
+    .reduce((a, f) => a + Number(f.valor), 0);
+  const totalFaturasAtrasadas = faturasAtrasadas?.length ?? 0;
 
   // Dados para gráficos
   const statusMap: Record<string, number> = {};
@@ -120,7 +141,6 @@ export default async function DashboardPage() {
   const ultimos5 = clientes.slice(0, 5);
 
   // Alertas: aviso prévio + Start vencendo em 15 dias
-  const hoje = new Date();
   const em15dias = new Date();
   em15dias.setDate(em15dias.getDate() + 15);
 
@@ -138,7 +158,7 @@ export default async function DashboardPage() {
         <p className="text-sm text-zinc-500">Visão geral da Inside</p>
 
         {/* Cards numéricos */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
           <Card className="border-zinc-800 bg-zinc-900">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-xs font-medium text-zinc-400">Clientes ativos</CardTitle>
@@ -197,6 +217,22 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold text-white">{churnCount}</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-zinc-800 bg-zinc-900">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-xs font-medium text-red-400">Faturas atrasadas</CardTitle>
+              <Clock className="h-4 w-4 text-red-500" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-lg font-bold text-red-400">{totalFaturasAtrasadas}</p>
+              <p className="mt-1 text-xs text-zinc-500">
+                {atrasadoBRL > 0 && formatarMoeda(atrasadoBRL, "BRL")}
+                {atrasadoBRL > 0 && atrasadoUSD > 0 && " + "}
+                {atrasadoUSD > 0 && formatarMoeda(atrasadoUSD, "USD")}
+                {atrasadoBRL === 0 && atrasadoUSD === 0 && "Nenhuma"}
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -314,7 +350,26 @@ export default async function DashboardPage() {
                 </div>
               )}
 
-              {avisoPrevio.length === 0 && startVencendo.length === 0 && (
+              {/* Faturas atrasadas */}
+              {totalFaturasAtrasadas > 0 && (
+                <div>
+                  <p className="mb-2 text-xs font-medium text-red-400 uppercase tracking-wider">
+                    Faturas atrasadas
+                  </p>
+                  <div className="flex items-center justify-between rounded-md px-3 py-2 bg-zinc-800/50">
+                    <p className="text-sm text-zinc-300">
+                      {totalFaturasAtrasadas} fatura{totalFaturasAtrasadas > 1 ? "s" : ""} em atraso
+                    </p>
+                    <Link href="/financeiro/cobrancas?status=atrasada">
+                      <Button variant="ghost" size="sm" className="text-xs text-zinc-400 hover:text-white">
+                        Ver em Financeiro
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {avisoPrevio.length === 0 && startVencendo.length === 0 && totalFaturasAtrasadas === 0 && (
                 <p className="py-4 text-center text-sm text-zinc-500">
                   Nenhum alerta no momento.
                 </p>
