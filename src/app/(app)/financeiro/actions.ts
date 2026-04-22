@@ -9,65 +9,20 @@ import {
 } from "@/lib/faturas";
 import type { Cliente } from "@/types/cliente";
 
+/** Revalida rotas afetadas pelo financeiro (só chamar de Server Actions diretas) */
 function revalidar() {
   revalidatePath("/financeiro");
   revalidatePath("/financeiro/cobrancas");
   revalidatePath("/clientes");
 }
 
-/** Gera faturas do mês para todos os clientes ativos, sem duplicar */
-export async function gerarFaturasDoMes(mesStr: string) {
-  const supabase = await createClient();
-  const mes = new Date(mesStr + "T00:00:00");
-  const inicioMes = new Date(mes.getFullYear(), mes.getMonth(), 1);
-  const fimMes = new Date(mes.getFullYear(), mes.getMonth() + 1, 0);
+// =============================================
+// Funções puras de geração (sem revalidatePath)
+// Podem ser chamadas durante render ou por outras funções
+// =============================================
 
-  const { data: clientes } = await supabase
-    .from("clientes")
-    .select("*")
-    .in("status", ["a_iniciar", "onboarding", "ongoing", "aviso_previo"]);
-
-  if (!clientes || clientes.length === 0) return { count: 0 };
-
-  let count = 0;
-  for (const cliente of clientes as Cliente[]) {
-    const frequencia = getFrequenciaDaFormaPagamento(cliente.forma_pagamento);
-    if (!frequencia) continue;
-
-    const datas = gerarDatasFaturas(cliente, inicioMes, fimMes);
-    const valor = calcularValorFatura(Number(cliente.fee_mensal), frequencia);
-
-    for (const data of datas) {
-      const dataStr = data.toISOString().split("T")[0];
-
-      // Verificar duplicata
-      const { data: existente } = await supabase
-        .from("faturas")
-        .select("id")
-        .eq("cliente_id", cliente.id)
-        .eq("data_vencimento", dataStr)
-        .limit(1);
-
-      if (existente && existente.length > 0) continue;
-
-      await supabase.from("faturas").insert({
-        cliente_id: cliente.id,
-        data_referencia: inicioMes.toISOString().split("T")[0],
-        data_vencimento: dataStr,
-        valor,
-        moeda: cliente.moeda || "BRL",
-        forma_pagamento: cliente.forma_pagamento,
-      });
-      count++;
-    }
-  }
-
-  revalidar();
-  return { count };
-}
-
-/** Gera faturas retroativas para um cliente num intervalo */
-export async function gerarFaturasRetroativas(
+/** Gera faturas de um cliente num intervalo, sem duplicar. NÃO revalida. */
+export async function gerarFaturasDoCliente(
   clienteId: string,
   dataInicioStr: string,
   dataFimStr: string
@@ -92,22 +47,24 @@ export async function gerarFaturasRetroativas(
 
   let count = 0;
   for (const data of datas) {
-    const dataStr = data.toISOString().split("T")[0];
+    const vencStr = data.toISOString().split("T")[0];
+    const refStr = new Date(data.getFullYear(), data.getMonth(), 1)
+      .toISOString()
+      .split("T")[0];
+
     const { data: existente } = await supabase
       .from("faturas")
       .select("id")
       .eq("cliente_id", clienteId)
-      .eq("data_vencimento", dataStr)
+      .eq("data_vencimento", vencStr)
       .limit(1);
 
     if (existente && existente.length > 0) continue;
 
     await supabase.from("faturas").insert({
       cliente_id: clienteId,
-      data_referencia: new Date(data.getFullYear(), data.getMonth(), 1)
-        .toISOString()
-        .split("T")[0],
-      data_vencimento: dataStr,
+      data_referencia: refStr,
+      data_vencimento: vencStr,
       valor,
       moeda: c.moeda || "BRL",
       forma_pagamento: c.forma_pagamento,
@@ -115,23 +72,64 @@ export async function gerarFaturasRetroativas(
     count++;
   }
 
-  revalidar();
   return { count };
 }
 
-/** Gera faturas de aviso prévio (hoje até dataSaida) */
-export async function gerarFaturasAvisoPrevio(
-  clienteId: string,
-  dataSaidaStr: string
-) {
-  const hoje = new Date().toISOString().split("T")[0];
-  return gerarFaturasRetroativas(clienteId, hoje, dataSaidaStr);
+/** Gera faturas do mês atual + próximos 2 meses para um cliente. NÃO revalida. */
+export async function gerarFaturasIniciaisDoCliente(clienteId: string) {
+  const hoje = new Date();
+  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const fimHorizonte = new Date(hoje.getFullYear(), hoje.getMonth() + 3, 0);
+
+  const inicioStr = inicioMes.toISOString().split("T")[0];
+  const fimStr = fimHorizonte.toISOString().split("T")[0];
+
+  return gerarFaturasDoCliente(clienteId, inicioStr, fimStr);
 }
 
-/** Cancela faturas pendentes após uma data */
-export async function cancelarFaturasAposData(
+/** Auto-cura: preenche buracos de faturas para clientes ativos. NÃO revalida. */
+export async function autoCurarFaturas() {
+  const supabase = await createClient();
+
+  const { data: clientes } = await supabase
+    .from("clientes")
+    .select("id, forma_pagamento")
+    .in("status", ["a_iniciar", "onboarding", "ongoing", "aviso_previo"]);
+
+  if (!clientes || clientes.length === 0) return { count: 0 };
+
+  const hoje = new Date();
+  const hojeStr = hoje.toISOString().split("T")[0];
+  const em30dias = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + 30);
+  const em30diasStr = em30dias.toISOString().split("T")[0];
+
+  let totalGeradas = 0;
+
+  for (const c of clientes) {
+    if (!getFrequenciaDaFormaPagamento(c.forma_pagamento)) continue;
+
+    const { data: futuras } = await supabase
+      .from("faturas")
+      .select("id")
+      .eq("cliente_id", c.id)
+      .eq("status", "pendente")
+      .gte("data_vencimento", hojeStr)
+      .lte("data_vencimento", em30diasStr)
+      .limit(1);
+
+    if (futuras && futuras.length > 0) continue;
+
+    const resultado = await gerarFaturasIniciaisDoCliente(c.id);
+    totalGeradas += resultado.count;
+  }
+
+  return { count: totalGeradas };
+}
+
+/** Cancela faturas pendentes após uma data. NÃO revalida. */
+export async function cancelarFaturasFuturas(
   clienteId: string,
-  dataStr: string
+  dataLimiteStr: string
 ) {
   const supabase = await createClient();
 
@@ -140,15 +138,57 @@ export async function cancelarFaturasAposData(
     .update({ status: "cancelada" })
     .eq("cliente_id", clienteId)
     .eq("status", "pendente")
-    .gt("data_vencimento", dataStr);
+    .gt("data_vencimento", dataLimiteStr);
 
   if (error) {
     console.error("Erro ao cancelar faturas:", error);
     return { error: "Erro ao cancelar faturas." };
   }
 
-  revalidar();
   return { count: count ?? 0 };
+}
+
+// =============================================
+// Server Actions diretas (chamadas por botão/form do usuário)
+// Estas SIM chamam revalidar()
+// =============================================
+
+/** Gera faturas do mês para todos os clientes ativos (botão manual) */
+export async function gerarFaturasDoMes(mesStr: string) {
+  const supabase = await createClient();
+  const mes = new Date(mesStr + "T00:00:00");
+  const inicioMes = new Date(mes.getFullYear(), mes.getMonth(), 1);
+  const fimMes = new Date(mes.getFullYear(), mes.getMonth() + 1, 0);
+
+  const { data: clientes } = await supabase
+    .from("clientes")
+    .select("id")
+    .in("status", ["a_iniciar", "onboarding", "ongoing", "aviso_previo"]);
+
+  if (!clientes || clientes.length === 0) return { count: 0 };
+
+  let count = 0;
+  const inicioStr = inicioMes.toISOString().split("T")[0];
+  const fimStr = fimMes.toISOString().split("T")[0];
+
+  for (const c of clientes) {
+    const resultado = await gerarFaturasDoCliente(c.id, inicioStr, fimStr);
+    count += resultado.count;
+  }
+
+  revalidar();
+  return { count };
+}
+
+/** Gera faturas de aviso prévio (Server Action direta) */
+export async function gerarFaturasAvisoPrevio(
+  clienteId: string,
+  dataSaidaStr: string
+) {
+  const hoje = new Date().toISOString().split("T")[0];
+  const resultado = await gerarFaturasDoCliente(clienteId, hoje, dataSaidaStr);
+  revalidar();
+  return resultado;
 }
 
 /** Marca uma fatura como paga */
@@ -163,10 +203,7 @@ export async function marcarFaturaComoPaga(
     .update({ status: "paga", data_pagamento_real: dataPagamentoReal })
     .eq("id", faturaId);
 
-  if (error) {
-    console.error("Erro ao marcar como paga:", error);
-    return { error: "Erro ao marcar como paga." };
-  }
+  if (error) return { error: "Erro ao marcar como paga." };
 
   revalidar();
   return { success: true };
@@ -188,7 +225,7 @@ export async function registrarCobranca(faturaId: string) {
   return { success: true };
 }
 
-/** Cancela uma fatura */
+/** Cancela uma fatura (Server Action direta) */
 export async function cancelarFatura(faturaId: string) {
   const supabase = await createClient();
 

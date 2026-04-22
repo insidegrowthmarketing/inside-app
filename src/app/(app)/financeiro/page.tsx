@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import {
   DollarSign,
@@ -20,9 +22,14 @@ import {
 import { formatarMoeda, formatarData } from "@/lib/formatters";
 import { GerarFaturasButton } from "./gerar-faturas-button";
 import { FinanceiroCharts } from "./financeiro-charts";
+import { AutoCuraToast } from "./auto-cura-toast";
+import { autoCurarFaturas } from "./actions";
 import type { Fatura } from "@/types/fatura";
 
 export default async function FinanceiroPage() {
+  // DEFESA 2: auto-cura de faturas ao abrir o financeiro
+  const autoCura = await autoCurarFaturas();
+
   const supabase = await createClient();
   const hoje = new Date();
   const hojeStr = hoje.toISOString().split("T")[0];
@@ -118,6 +125,8 @@ export default async function FinanceiroPage() {
       <Header titulo="Financeiro">
         <GerarFaturasButton />
       </Header>
+
+      <AutoCuraToast faturasGeradas={autoCura.count} />
 
       <div className="space-y-6 p-6">
         <p className="text-sm text-zinc-500">Controle de cobranças e recebimentos</p>

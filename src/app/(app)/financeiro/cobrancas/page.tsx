@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DollarSign } from "lucide-react";
 import { FiltrosFaturas } from "./filtros-faturas";
 import { TabelaFaturas } from "./tabela-faturas";
+import { calcularStatusRuntime } from "@/types/fatura";
 import type { FaturaComCliente } from "@/types/fatura";
 
 interface PageProps {
@@ -67,14 +68,23 @@ export default async function CobrancasPage({ searchParams }: PageProps) {
     );
   }
 
-  // Gerar meses disponíveis (12 passados + 3 futuros)
+  // Ordenar: atrasadas primeiro, pendentes por vencimento ASC, pagas, canceladas
+  const ordemStatus = { atrasada: 0, pendente: 1, paga: 2, cancelada: 3 };
+  lista.sort((a, b) => {
+    const sa = ordemStatus[calcularStatusRuntime(a)];
+    const sb = ordemStatus[calcularStatusRuntime(b)];
+    if (sa !== sb) return sa - sb;
+    return a.data_vencimento.localeCompare(b.data_vencimento);
+  });
+
+  // Gerar meses disponíveis (3 passados + mês atual + 2 futuros)
   const hoje = new Date();
   const mesesNome = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
   ];
   const mesesDisponiveis: { value: string; label: string }[] = [];
-  for (let i = -12; i <= 3; i++) {
+  for (let i = -3; i <= 2; i++) {
     const d = new Date(hoje.getFullYear(), hoje.getMonth() + i, 1);
     const valor = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     mesesDisponiveis.push({

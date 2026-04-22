@@ -4,8 +4,12 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { clienteSchema } from "@/lib/schemas/cliente";
+import {
+  gerarFaturasIniciaisDoCliente,
+  cancelarFaturasFuturas,
+} from "@/app/(app)/financeiro/actions";
 
-/** Cria um novo cliente no Supabase e retorna o ID (sem redirecionar) */
+/** Cria um novo cliente e gera faturas automaticamente */
 export async function criarCliente(formData: unknown) {
   const parsed = clienteSchema.safeParse(formData);
 
@@ -16,18 +20,27 @@ export async function criarCliente(formData: unknown) {
   const supabase = await createClient();
   const dados = limparDadosVazios(parsed.data);
 
-  const { data, error } = await supabase.from("clientes").insert(dados).select("id").single();
+  const { data, error } = await supabase
+    .from("clientes")
+    .insert(dados)
+    .select("id")
+    .single();
 
   if (error || !data) {
     console.error("Erro ao criar cliente:", error);
     return { error: "Erro ao salvar cliente. Tente novamente." };
   }
 
+  // DEFESA 1: gerar faturas automaticamente (mês atual + 2 meses futuros)
+  const resultado = await gerarFaturasIniciaisDoCliente(data.id);
+
   revalidatePath("/clientes");
-  return { clienteId: data.id };
+  revalidatePath("/financeiro");
+  revalidatePath("/financeiro/cobrancas");
+  return { clienteId: data.id, faturasGeradas: resultado.count };
 }
 
-/** Atualiza um cliente existente no Supabase */
+/** Atualiza um cliente e regenera faturas se necessário */
 export async function atualizarCliente(id: string, formData: unknown) {
   const parsed = clienteSchema.safeParse(formData);
 
@@ -45,9 +58,20 @@ export async function atualizarCliente(id: string, formData: unknown) {
     return { error: "Erro ao atualizar cliente. Tente novamente." };
   }
 
+  // Se cliente continua ativo, regenerar faturas para cobrir novo padrão
+  const statusAtivos = ["a_iniciar", "onboarding", "ongoing", "aviso_previo"];
+  const statusAtual = parsed.data.status;
+  let faturasGeradas = 0;
+
+  if (statusAtivos.includes(statusAtual)) {
+    const resultado = await gerarFaturasIniciaisDoCliente(id);
+    faturasGeradas = resultado.count;
+  }
+
   revalidatePath("/clientes");
   revalidatePath("/clientes/ltv");
   revalidatePath(`/clientes/${id}`);
+  revalidatePath("/financeiro");
   redirect(`/clientes/${id}`);
 }
 
@@ -66,7 +90,7 @@ export async function excluirCliente(id: string) {
   redirect("/clientes");
 }
 
-/** Atualiza um campo individual de um cliente (para edição inline na listagem) */
+/** Atualiza um campo individual de um cliente (dropdown inline) */
 export async function atualizarCampoCliente(
   id: string,
   campo: string,
@@ -86,17 +110,14 @@ export async function atualizarCampoCliente(
 
   revalidatePath("/clientes");
   revalidatePath("/clientes/ltv");
+  revalidatePath("/financeiro");
   return { success: true };
 }
 
 /** Atualiza o pacote de um cliente com lógica de fim_contrato */
-export async function atualizarPacoteCliente(
-  id: string,
-  novoPacote: string
-) {
+export async function atualizarPacoteCliente(id: string, novoPacote: string) {
   const supabase = await createClient();
 
-  // Buscar dados atuais do cliente para calcular fim_contrato
   const { data: cliente, error: fetchErr } = await supabase
     .from("clientes")
     .select("inicio_contrato")
@@ -131,7 +152,7 @@ export async function atualizarPacoteCliente(
   return { success: true };
 }
 
-/** Marca um cliente como churn com data de saída e motivo */
+/** Marca um cliente como churn + cancela faturas futuras */
 export async function marcarChurn(
   id: string,
   dataSaida: string,
@@ -153,12 +174,16 @@ export async function marcarChurn(
     return { error: "Erro ao marcar churn. Tente novamente." };
   }
 
+  // Cancelar faturas pendentes após data de saída
+  await cancelarFaturasFuturas(id, dataSaida);
+
   revalidatePath("/clientes");
   revalidatePath("/clientes/ltv");
+  revalidatePath("/financeiro");
   return { success: true };
 }
 
-/** Marca múltiplos clientes como churn em massa */
+/** Marca múltiplos clientes como churn em massa + cancela faturas */
 export async function marcarChurnEmMassa(
   ids: string[],
   dataSaida: string,
@@ -180,8 +205,14 @@ export async function marcarChurnEmMassa(
     return { error: "Erro ao marcar churn. Tente novamente." };
   }
 
+  // Cancelar faturas futuras de todos os clientes
+  for (const id of ids) {
+    await cancelarFaturasFuturas(id, dataSaida);
+  }
+
   revalidatePath("/clientes");
   revalidatePath("/clientes/ltv");
+  revalidatePath("/financeiro");
   return { success: true, count: ids.length };
 }
 

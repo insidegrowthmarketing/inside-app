@@ -9,8 +9,10 @@ export function getFrequenciaDaFormaPagamento(
 ): Frequencia | null {
   if (!formaPagamento) return null;
   const fp = formaPagamento.toLowerCase();
-  if (fp.includes("semanal")) return "semanal";
+  // Checar "semanal" antes de "mensal" pois "semanal" não contém "mensal"
+  // Mas "quinzenal" deve vir primeiro pois também não contém os outros
   if (fp.includes("quinzenal")) return "quinzenal";
+  if (fp.includes("semanal")) return "semanal";
   if (fp.includes("mensal")) return "mensal";
   return null;
 }
@@ -30,7 +32,13 @@ export function calcularValorFatura(
   }
 }
 
-/** Gera todas as datas de vencimento para um cliente num intervalo */
+/**
+ * Gera todas as datas de vencimento para um cliente num intervalo.
+ *
+ * MENSAL: uma fatura por mês no dia data_pagamento
+ * SEMANAL: uma fatura por semana no dia_semana_pagamento (0=dom, 6=sáb)
+ * QUINZENAL: duas faturas por mês nos dias_pagamento_quinzenal[0] e [1]
+ */
 export function gerarDatasFaturas(
   cliente: Cliente,
   dataInicio: Date,
@@ -43,8 +51,12 @@ export function gerarDatasFaturas(
 
   if (frequencia === "mensal") {
     const dia = cliente.data_pagamento || 1;
+    // Começar do mês de dataInicio
     const cursor = new Date(dataInicio.getFullYear(), dataInicio.getMonth(), dia);
-    if (cursor < dataInicio) cursor.setMonth(cursor.getMonth() + 1);
+    // Se a data calculada caiu antes do início, avançar 1 mês
+    if (cursor < dataInicio) {
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
     while (cursor <= dataFim) {
       datas.push(new Date(cursor));
       cursor.setMonth(cursor.getMonth() + 1);
@@ -53,11 +65,13 @@ export function gerarDatasFaturas(
 
   if (frequencia === "semanal") {
     const diaSemana = cliente.dia_semana_pagamento ?? 1; // default segunda
+    // Começar do dataInicio e avançar até o primeiro dia da semana correto
     const cursor = new Date(dataInicio);
-    // Avançar até o primeiro dia da semana correto
     while (cursor.getDay() !== diaSemana) {
       cursor.setDate(cursor.getDate() + 1);
+      if (cursor > dataFim) break;
     }
+    // Iterar semana a semana
     while (cursor <= dataFim) {
       datas.push(new Date(cursor));
       cursor.setDate(cursor.getDate() + 7);
@@ -66,14 +80,8 @@ export function gerarDatasFaturas(
 
   if (frequencia === "quinzenal") {
     const dias = cliente.dias_pagamento_quinzenal || [1, 15];
-    const cursor = new Date(
-      dataInicio.getFullYear(),
-      dataInicio.getMonth(),
-      1
-    );
-    if (cursor < dataInicio) {
-      // Se o mês começou antes do intervalo, tenta o mês anterior
-    }
+    // Começar do mês de dataInicio
+    const cursor = new Date(dataInicio.getFullYear(), dataInicio.getMonth(), 1);
     // Iterar mês a mês e gerar 2 faturas por mês
     while (cursor <= dataFim) {
       for (const dia of dias) {
@@ -105,7 +113,6 @@ export function formatarReferencia(
   ];
 
   if (freq === "semanal") {
-    // Calcular número da semana no ano
     const inicio = new Date(d.getFullYear(), 0, 1);
     const semana = Math.ceil(
       ((d.getTime() - inicio.getTime()) / 86400000 + inicio.getDay() + 1) / 7

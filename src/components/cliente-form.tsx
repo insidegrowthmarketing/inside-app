@@ -30,7 +30,6 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { clienteSchema, type ClienteFormData } from "@/lib/schemas/cliente";
 import { criarCliente, atualizarCliente } from "@/app/(app)/clientes/actions";
-import { gerarFaturasRetroativas } from "@/app/(app)/financeiro/actions";
 import { formatarFusoHorario } from "@/lib/fuso-horario";
 import { getFrequenciaDaFormaPagamento } from "@/lib/faturas";
 import { DIAS_SEMANA } from "@/types/fatura";
@@ -110,12 +109,6 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
   const [motivoChurn, setMotivoChurn] = useState("");
   const [statusAnterior, setStatusAnterior] = useState(cliente?.status || "a_iniciar");
 
-  // Dialog de geração de faturas (pós-criação)
-  const [faturasDialogAberto, setFaturasDialogAberto] = useState(false);
-  const [novoClienteId, setNovoClienteId] = useState<string | null>(null);
-  const [novoClienteInicioContrato, setNovoClienteInicioContrato] = useState("");
-  const [gerandoFaturas, setGerandoFaturas] = useState(false);
-
   // Lógica automática do pacote
   useEffect(() => {
     if (!pacote) return;
@@ -182,43 +175,17 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
         toast.error(resultado.error);
         return;
       }
-      if ("clienteId" in resultado && resultado.clienteId) {
-        toast.success("Cliente cadastrado!");
-        setNovoClienteId(resultado.clienteId);
-        setNovoClienteInicioContrato(dados.inicio_contrato);
-        setFaturasDialogAberto(true);
+      // Faturas são geradas automaticamente pela Server Action
+      const faturas = "faturasGeradas" in resultado ? resultado.faturasGeradas ?? 0 : 0;
+      if (faturas > 0) {
+        toast.success(`Cliente criado. ${faturas} faturas geradas.`);
+      } else {
+        toast.success("Cliente criado com sucesso!");
       }
+      router.push("/clientes");
     }
   };
 
-  async function handleGerarFaturas(retroativas: boolean) {
-    if (!novoClienteId) return;
-    setGerandoFaturas(true);
-
-    const hoje = new Date().toISOString().split("T")[0];
-    const dataInicio = retroativas ? novoClienteInicioContrato : hoje;
-    // Gerar faturas até o fim do mês seguinte para cobrir o próximo ciclo
-    const fimProximoMes = new Date();
-    fimProximoMes.setMonth(fimProximoMes.getMonth() + 1);
-    fimProximoMes.setDate(0); // último dia do mês atual se não retroativas, ou...
-    const fimMesAtual = new Date();
-    fimMesAtual.setMonth(fimMesAtual.getMonth() + 1, 0);
-    const dataFim = fimMesAtual.toISOString().split("T")[0];
-
-    const resultado = await gerarFaturasRetroativas(novoClienteId, dataInicio, dataFim);
-
-    if ("error" in resultado && resultado.error) {
-      toast.error(resultado.error);
-    } else {
-      toast.success(`${resultado.count} fatura${resultado.count !== 1 ? "s" : ""} gerada${resultado.count !== 1 ? "s" : ""}`);
-    }
-
-    setGerandoFaturas(false);
-    setFaturasDialogAberto(false);
-    router.push("/clientes");
-  }
-
-  // Valores do quinzenal para os inputs controlados
   const quinzenal = watch("dias_pagamento_quinzenal");
 
   return (
@@ -227,59 +194,32 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
         {/* Seção 1: Informações gerais */}
         <Card className="border-zinc-800 bg-zinc-900">
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-zinc-300">
-              Informações gerais
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-zinc-300">Informações gerais</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="nome">Nome *</Label>
-              <Input
-                id="nome"
-                placeholder="Nome da empresa/cliente"
-                className="border-zinc-800 bg-zinc-950 text-zinc-200"
-                {...register("nome")}
-              />
-              {errors.nome && (
-                <p className="text-xs text-red-400">{errors.nome.message}</p>
-              )}
+              <Input id="nome" placeholder="Nome da empresa/cliente" className="border-zinc-800 bg-zinc-950 text-zinc-200" {...register("nome")} />
+              {errors.nome && <p className="text-xs text-red-400">{errors.nome.message}</p>}
             </div>
 
             <div className="space-y-2">
               <Label>Status *</Label>
-              <Select
-                value={watch("status")}
-                onValueChange={(v) => { if (v) handleStatusChange(v); }}
-              >
-                <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
+              <Select value={watch("status")} onValueChange={(v) => { if (v) handleStatusChange(v); }}>
+                <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200"><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent className="border-zinc-800 bg-zinc-950">
-                  {STATUS_CLIENTE.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                  ))}
+                  {STATUS_CLIENTE.map((s) => (<SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>))}
                 </SelectContent>
               </Select>
-              {errors.status && (
-                <p className="text-xs text-red-400">{errors.status.message}</p>
-              )}
+              {errors.status && <p className="text-xs text-red-400">{errors.status.message}</p>}
             </div>
 
             <div className="space-y-2">
               <Label>Fuso horário</Label>
-              <Select
-                value={watch("fuso_horario") || ""}
-                onValueChange={(v) => setValue("fuso_horario", v ?? "")}
-              >
-                <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
+              <Select value={watch("fuso_horario") || ""} onValueChange={(v) => setValue("fuso_horario", v ?? "")}>
+                <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200"><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent className="border-zinc-800 bg-zinc-950">
-                  {FUSOS_HORARIOS.map((f) => (
-                    <SelectItem key={f.value} value={f.value}>
-                      {formatarFusoHorario(f.value)}
-                    </SelectItem>
-                  ))}
+                  {FUSOS_HORARIOS.map((f) => (<SelectItem key={f.value} value={f.value}>{formatarFusoHorario(f.value)}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
@@ -289,109 +229,58 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
         {/* Seção 2: Contrato */}
         <Card className="border-zinc-800 bg-zinc-900">
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-zinc-300">
-              Contrato
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-zinc-300">Contrato</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-2">
               <Label>Pacote *</Label>
-              <Select
-                value={watch("pacote")}
-                onValueChange={(v) => { if (v) setValue("pacote", v as ClienteFormData["pacote"]); }}
-              >
-                <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
+              <Select value={watch("pacote")} onValueChange={(v) => { if (v) setValue("pacote", v as ClienteFormData["pacote"]); }}>
+                <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200"><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent className="border-zinc-800 bg-zinc-950">
-                  {PACOTES.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                  ))}
+                  {PACOTES.map((p) => (<SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>))}
                 </SelectContent>
               </Select>
-              {errors.pacote && (
-                <p className="text-xs text-red-400">{errors.pacote.message}</p>
-              )}
+              {errors.pacote && <p className="text-xs text-red-400">{errors.pacote.message}</p>}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="fee_mensal">Fee mensal *</Label>
               <div className="flex gap-2">
-                <Input
-                  id="fee_mensal"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0,00"
-                  className="border-zinc-800 bg-zinc-950 text-zinc-200 flex-[7]"
-                  {...register("fee_mensal", { valueAsNumber: true })}
-                />
-                <Select
-                  value={watch("moeda")}
-                  onValueChange={(v) => { if (v) setValue("moeda", v as ClienteFormData["moeda"]); }}
-                >
-                  <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200 flex-[3]">
-                    <SelectValue />
-                  </SelectTrigger>
+                <Input id="fee_mensal" type="number" step="0.01" min="0" placeholder="0,00" className="border-zinc-800 bg-zinc-950 text-zinc-200 flex-[7]" {...register("fee_mensal", { valueAsNumber: true })} />
+                <Select value={watch("moeda")} onValueChange={(v) => { if (v) setValue("moeda", v as ClienteFormData["moeda"]); }}>
+                  <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200 flex-[3]"><SelectValue /></SelectTrigger>
                   <SelectContent className="border-zinc-800 bg-zinc-950">
-                    {MOEDAS.map((m) => (
-                      <SelectItem key={m.value} value={m.value}>{m.label} {m.nome}</SelectItem>
-                    ))}
+                    {MOEDAS.map((m) => (<SelectItem key={m.value} value={m.value}>{m.label} {m.nome}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
-              {errors.fee_mensal && (
-                <p className="text-xs text-red-400">{errors.fee_mensal.message}</p>
-              )}
+              {errors.fee_mensal && <p className="text-xs text-red-400">{errors.fee_mensal.message}</p>}
             </div>
 
             <div className="space-y-2">
               <Label>Forma de pagamento</Label>
-              <Select
-                value={watch("forma_pagamento") || ""}
-                onValueChange={(v) => setValue("forma_pagamento", v ?? "")}
-              >
-                <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
+              <Select value={watch("forma_pagamento") || ""} onValueChange={(v) => setValue("forma_pagamento", v ?? "")}>
+                <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200"><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent className="border-zinc-800 bg-zinc-950">
-                  {FORMAS_PAGAMENTO.map((f) => (
-                    <SelectItem key={f} value={f}>{f}</SelectItem>
-                  ))}
+                  {FORMAS_PAGAMENTO.map((f) => (<SelectItem key={f} value={f}>{f}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Campo de dia condicional à frequência */}
             {frequencia === "mensal" && (
               <div className="space-y-2">
                 <Label htmlFor="data_pagamento">Dia do pagamento</Label>
-                <Input
-                  id="data_pagamento"
-                  type="number"
-                  min="1"
-                  max="31"
-                  placeholder="Ex: 10"
-                  className="border-zinc-800 bg-zinc-950 text-zinc-200"
-                  {...register("data_pagamento", { valueAsNumber: true })}
-                />
+                <Input id="data_pagamento" type="number" min="1" max="31" placeholder="Ex: 10" className="border-zinc-800 bg-zinc-950 text-zinc-200" {...register("data_pagamento", { valueAsNumber: true })} />
               </div>
             )}
 
             {frequencia === "semanal" && (
               <div className="space-y-2">
                 <Label>Dia da semana do pagamento</Label>
-                <Select
-                  value={watch("dia_semana_pagamento")?.toString() ?? ""}
-                  onValueChange={(v) => { if (v) setValue("dia_semana_pagamento", Number(v)); }}
-                >
-                  <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200">
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
+                <Select value={watch("dia_semana_pagamento")?.toString() ?? ""} onValueChange={(v) => { if (v) setValue("dia_semana_pagamento", Number(v)); }}>
+                  <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200"><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent className="border-zinc-800 bg-zinc-950">
-                    {DIAS_SEMANA.map((d) => (
-                      <SelectItem key={d.value} value={d.value.toString()}>{d.label}</SelectItem>
-                    ))}
+                    {DIAS_SEMANA.map((d) => (<SelectItem key={d.value} value={d.value.toString()}>{d.label}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
@@ -401,116 +290,62 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
               <>
                 <div className="space-y-2">
                   <Label>1o dia do mês</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="31"
-                    placeholder="Ex: 1"
-                    className="border-zinc-800 bg-zinc-950 text-zinc-200"
-                    value={quinzenal?.[0] ?? ""}
-                    onChange={(e) => {
-                      const v = e.target.value ? Number(e.target.value) : 1;
-                      setValue("dias_pagamento_quinzenal", [v, quinzenal?.[1] ?? 15]);
-                    }}
-                  />
+                  <Input type="number" min="1" max="31" placeholder="Ex: 1" className="border-zinc-800 bg-zinc-950 text-zinc-200" value={quinzenal?.[0] ?? ""} onChange={(e) => { const v = e.target.value ? Number(e.target.value) : 1; setValue("dias_pagamento_quinzenal", [v, quinzenal?.[1] ?? 15]); }} />
                 </div>
                 <div className="space-y-2">
                   <Label>2o dia do mês</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="31"
-                    placeholder="Ex: 15"
-                    className="border-zinc-800 bg-zinc-950 text-zinc-200"
-                    value={quinzenal?.[1] ?? ""}
-                    onChange={(e) => {
-                      const v = e.target.value ? Number(e.target.value) : 15;
-                      setValue("dias_pagamento_quinzenal", [quinzenal?.[0] ?? 1, v]);
-                    }}
-                  />
+                  <Input type="number" min="1" max="31" placeholder="Ex: 15" className="border-zinc-800 bg-zinc-950 text-zinc-200" value={quinzenal?.[1] ?? ""} onChange={(e) => { const v = e.target.value ? Number(e.target.value) : 15; setValue("dias_pagamento_quinzenal", [quinzenal?.[0] ?? 1, v]); }} />
                 </div>
               </>
             )}
 
-            {/* Se nenhuma frequência, mostrar dia do pagamento genérico */}
             {!frequencia && (
               <div className="space-y-2">
                 <Label htmlFor="data_pagamento_gen">Dia do pagamento</Label>
-                <Input
-                  id="data_pagamento_gen"
-                  type="number"
-                  min="1"
-                  max="31"
-                  placeholder="Ex: 10"
-                  className="border-zinc-800 bg-zinc-950 text-zinc-200"
-                  {...register("data_pagamento", { valueAsNumber: true })}
-                />
+                <Input id="data_pagamento_gen" type="number" min="1" max="31" placeholder="Ex: 10" className="border-zinc-800 bg-zinc-950 text-zinc-200" {...register("data_pagamento", { valueAsNumber: true })} />
               </div>
             )}
 
             <div className="space-y-2">
               <Label htmlFor="inicio_contrato">Início do contrato *</Label>
-              <Input
-                id="inicio_contrato"
-                type="date"
-                className="border-zinc-800 bg-zinc-950 text-zinc-200"
-                {...register("inicio_contrato")}
-              />
-              {errors.inicio_contrato && (
-                <p className="text-xs text-red-400">{errors.inicio_contrato.message}</p>
-              )}
+              <Input id="inicio_contrato" type="date" className="border-zinc-800 bg-zinc-950 text-zinc-200" {...register("inicio_contrato")} />
+              {errors.inicio_contrato && <p className="text-xs text-red-400">{errors.inicio_contrato.message}</p>}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="fim_contrato">Fim do contrato</Label>
-              <Input
-                id="fim_contrato"
-                type="date"
-                className="border-zinc-800 bg-zinc-950 text-zinc-200"
-                disabled={isPacotePro}
-                {...register("fim_contrato")}
-              />
-              {isPacotePro && (
-                <p className="text-xs text-zinc-500">Pacote PRO não possui fim de contrato</p>
-              )}
+              <Input id="fim_contrato" type="date" className="border-zinc-800 bg-zinc-950 text-zinc-200" disabled={isPacotePro} {...register("fim_contrato")} />
+              {isPacotePro && <p className="text-xs text-zinc-500">Pacote PRO não possui fim de contrato</p>}
             </div>
           </CardContent>
         </Card>
 
         {/* Seção 3: Responsáveis internos */}
         <Card className="border-zinc-800 bg-zinc-900">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-zinc-300">Responsáveis internos</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="text-sm font-medium text-zinc-300">Responsáveis internos</CardTitle></CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Gestor de projetos *</Label>
               <Select value={watch("gestor_projetos") || ""} onValueChange={(v) => setValue("gestor_projetos", v ?? "")}>
                 <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent className="border-zinc-800 bg-zinc-950">
-                  {GESTORES_PROJETOS.map((g) => (<SelectItem key={g} value={g}>{g}</SelectItem>))}
-                </SelectContent>
+                <SelectContent className="border-zinc-800 bg-zinc-950">{GESTORES_PROJETOS.map((g) => (<SelectItem key={g} value={g}>{g}</SelectItem>))}</SelectContent>
               </Select>
-              {errors.gestor_projetos && (<p className="text-xs text-red-400">{errors.gestor_projetos.message}</p>)}
+              {errors.gestor_projetos && <p className="text-xs text-red-400">{errors.gestor_projetos.message}</p>}
             </div>
             <div className="space-y-2">
               <Label>Gestor de tráfego *</Label>
               <Select value={watch("gestor_trafego") || ""} onValueChange={(v) => setValue("gestor_trafego", v ?? "")}>
                 <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent className="border-zinc-800 bg-zinc-950">
-                  {GESTORES_TRAFEGO.map((g) => (<SelectItem key={g} value={g}>{g}</SelectItem>))}
-                </SelectContent>
+                <SelectContent className="border-zinc-800 bg-zinc-950">{GESTORES_TRAFEGO.map((g) => (<SelectItem key={g} value={g}>{g}</SelectItem>))}</SelectContent>
               </Select>
-              {errors.gestor_trafego && (<p className="text-xs text-red-400">{errors.gestor_trafego.message}</p>)}
+              {errors.gestor_trafego && <p className="text-xs text-red-400">{errors.gestor_trafego.message}</p>}
             </div>
           </CardContent>
         </Card>
 
         {/* Seção 4: Responsável financeiro */}
         <Card className="border-zinc-800 bg-zinc-900">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-zinc-300">Responsável financeiro do cliente</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="text-sm font-medium text-zinc-300">Responsável financeiro do cliente</CardTitle></CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="responsavel_financeiro">Nome</Label>
@@ -525,9 +360,7 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
 
         {/* Seção 5: GHL e Observações */}
         <Card className="border-zinc-800 bg-zinc-900">
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-zinc-300">GHL e Observações</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="text-sm font-medium text-zinc-300">GHL e Observações</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3">
               <Switch id="contempla_ghl" checked={watch("contempla_ghl")} onCheckedChange={(checked) => setValue("contempla_ghl", checked)} />
@@ -553,9 +386,7 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
       {/* Dialog de confirmação de churn */}
       <Dialog open={churnDialogAberto} onOpenChange={(open) => { if (!open) cancelarChurn(); }}>
         <DialogContent className="border-zinc-800 bg-zinc-900">
-          <DialogHeader>
-            <DialogTitle className="text-zinc-200">Confirmar Churn</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle className="text-zinc-200">Confirmar Churn</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="data_saida_churn">Data de saída *</Label>
@@ -565,51 +396,13 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
               <Label>Motivo do churn</Label>
               <Select value={motivoChurn} onValueChange={(v) => { if (v) setMotivoChurn(v); }}>
                 <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200"><SelectValue placeholder="— Selecione —" /></SelectTrigger>
-                <SelectContent className="border-zinc-800 bg-zinc-950">
-                  {MOTIVOS_CHURN.map((m) => (<SelectItem key={m} value={m}>{m}</SelectItem>))}
-                </SelectContent>
+                <SelectContent className="border-zinc-800 bg-zinc-950">{MOTIVOS_CHURN.map((m) => (<SelectItem key={m} value={m}>{m}</SelectItem>))}</SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter className="gap-2">
             <Button variant="ghost" className="text-zinc-400 hover:text-white" onClick={cancelarChurn}>Cancelar</Button>
             <Button variant="destructive" onClick={confirmarChurn} disabled={!dataSaidaChurn}>Confirmar churn</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog de geração de faturas (após criação de cliente) */}
-      <Dialog open={faturasDialogAberto} onOpenChange={() => {}}>
-        <DialogContent className="border-zinc-800 bg-zinc-900">
-          <DialogHeader>
-            <DialogTitle className="text-zinc-200">Gerar faturas</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-zinc-300">
-              Cliente criado com sucesso! Deseja gerar faturas retroativas desde{" "}
-              <strong className="text-zinc-200">
-                {novoClienteInicioContrato
-                  ? new Date(novoClienteInicioContrato + "T00:00:00").toLocaleDateString("pt-BR")
-                  : "—"}
-              </strong>?
-            </p>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button
-              variant="ghost"
-              className="text-zinc-400 hover:text-white"
-              onClick={() => handleGerarFaturas(false)}
-              disabled={gerandoFaturas}
-            >
-              Não, só futuras
-            </Button>
-            <Button
-              onClick={() => handleGerarFaturas(true)}
-              disabled={gerandoFaturas}
-            >
-              {gerandoFaturas && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sim, gerar retroativas
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
