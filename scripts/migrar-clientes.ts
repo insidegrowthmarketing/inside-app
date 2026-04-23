@@ -429,11 +429,12 @@ async function importarCliente(row: CSVRow, index: number, total: number) {
     const statusLabel = status === "aviso_previo" ? `aviso_previo até ${dataSaida}` : status;
     console.log(`  ✓ Cliente criado (status: ${statusLabel}, pacote: ${pacote})`);
 
-    // Gerar faturas — pular Stripe (aguardando integração) e onboarding
-    const ehStripe = formaPagamento?.toLowerCase().startsWith("stripe");
+    // Gerar faturas — pular Stripe/ASAAS (aguardando integração) e onboarding
+    const fpLower = formaPagamento?.toLowerCase() || "";
+    const naoGeraFaturas = fpLower.startsWith("stripe") || fpLower === "asaas";
 
-    if (ehStripe) {
-      console.log(`  ⊘ Faturas não geradas (Stripe — aguardando integração)`);
+    if (naoGeraFaturas) {
+      console.log(`  ⊘ Faturas não geradas (${formaPagamento} — aguardando integração)`);
       return { sucesso: true, faturas: 0, nome, semFatura: true };
     }
 

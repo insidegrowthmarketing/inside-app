@@ -78,10 +78,13 @@ export const FORMAS_PAGAMENTO = [
   "Zelle mensal",
   "Zelle quinzenal",
   "Zelle semanal",
+  "ASAAS",
 ] as const;
 
-/** Fusos horários disponíveis (cidades americanas com timezone IANA) */
+/** Fusos horários disponíveis */
 export const FUSOS_HORARIOS = [
+  // Brasil — America/Sao_Paulo
+  { value: "brasilia_df", label: "Brasília, DF (GMT-3)", timezone: "America/Sao_Paulo" },
   // Costa Leste — America/New_York
   { value: "atlanta_ga", label: "Atlanta, GA", timezone: "America/New_York" },
   { value: "boca_raton_fl", label: "Boca Raton, FL", timezone: "America/New_York" },
