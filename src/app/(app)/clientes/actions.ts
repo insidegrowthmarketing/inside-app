@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { clienteSchema } from "@/lib/schemas/cliente";
+import { STATUS_ATIVOS } from "@/types/cliente";
 import {
   gerarFaturasIniciaisDoCliente,
   cancelarFaturasFuturas,
@@ -59,11 +60,10 @@ export async function atualizarCliente(id: string, formData: unknown) {
   }
 
   // Se cliente continua ativo, regenerar faturas para cobrir novo padrão
-  const statusAtivos = ["a_iniciar", "onboarding", "ongoing", "aviso_previo"];
   const statusAtual = parsed.data.status;
   let faturasGeradas = 0;
 
-  if (statusAtivos.includes(statusAtual)) {
+  if ((STATUS_ATIVOS as readonly string[]).includes(statusAtual)) {
     const resultado = await gerarFaturasIniciaisDoCliente(id);
     faturasGeradas = resultado.count;
   }

@@ -36,6 +36,9 @@ export type ClienteInput = Omit<Cliente, "id" | "created_at" | "updated_at">;
 // Constantes
 // =============================================
 
+/** Status considerados "ativos" (todos exceto churn) */
+export const STATUS_ATIVOS = ["a_iniciar", "onboarding", "ongoing", "aviso_previo"] as const;
+
 /** Status possíveis do cliente com label em português e cor do badge */
 export const STATUS_CLIENTE = [
   { value: "a_iniciar", label: "A iniciar", cor: "zinc" },

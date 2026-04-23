@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
 import { formatarMoeda, formatarData } from "@/lib/formatters";
-import { PACOTES } from "@/types/cliente";
+import { PACOTES, STATUS_ATIVOS } from "@/types/cliente";
 import type { Cliente } from "@/types/cliente";
 import { DashboardCharts } from "./dashboard-charts";
 
@@ -49,18 +49,15 @@ export default async function DashboardPage() {
   const clientes = (clientesAtivos ?? []) as Cliente[];
 
   // Métricas
-  const ongoing = clientes.filter((c) => c.status === "ongoing");
+  const todosAtivos = clientes; // já filtrado .neq("status", "churn") na query
   const onboarding = clientes.filter((c) => c.status === "onboarding");
   const avisoPrevio = clientes.filter((c) => c.status === "aviso_previo");
 
-  const statusAtivos = ["ongoing", "onboarding", "aviso_previo"];
-  const clientesAtivosParaMRR = clientes.filter((c) => statusAtivos.includes(c.status));
-
-  const mrrBRL = clientesAtivosParaMRR
+  const mrrBRL = todosAtivos
     .filter((c) => (c.moeda || "BRL") === "BRL")
     .reduce((acc, c) => acc + Number(c.fee_mensal), 0);
 
-  const mrrUSD = clientesAtivosParaMRR
+  const mrrUSD = todosAtivos
     .filter((c) => c.moeda === "USD")
     .reduce((acc, c) => acc + Number(c.fee_mensal), 0);
 
@@ -162,8 +159,8 @@ export default async function DashboardPage() {
               <Users className="h-4 w-4 text-zinc-500" />
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-white">{ongoing.length}</p>
-              <p className="mt-1 text-xs text-zinc-500">Status: Ongoing</p>
+              <p className="text-2xl font-bold text-white">{todosAtivos.length}</p>
+              <p className="mt-1 text-xs text-zinc-500">Todos exceto churn</p>
             </CardContent>
           </Card>
 

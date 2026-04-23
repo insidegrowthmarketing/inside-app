@@ -7,6 +7,7 @@ import {
   calcularValorFatura,
   gerarDatasFaturas,
 } from "@/lib/faturas";
+import { STATUS_ATIVOS } from "@/types/cliente";
 import type { Cliente } from "@/types/cliente";
 
 /** Revalida rotas afetadas pelo financeiro (só chamar de Server Actions diretas) */
@@ -94,7 +95,7 @@ export async function autoCurarFaturas() {
   const { data: clientes } = await supabase
     .from("clientes")
     .select("id, forma_pagamento")
-    .in("status", ["a_iniciar", "onboarding", "ongoing", "aviso_previo"]);
+    .in("status", [...STATUS_ATIVOS]);
 
   if (!clientes || clientes.length === 0) return { count: 0 };
 
@@ -163,7 +164,7 @@ export async function gerarFaturasDoMes(mesStr: string) {
   const { data: clientes } = await supabase
     .from("clientes")
     .select("id")
-    .in("status", ["a_iniciar", "onboarding", "ongoing", "aviso_previo"]);
+    .in("status", [...STATUS_ATIVOS]);
 
   if (!clientes || clientes.length === 0) return { count: 0 };
 
