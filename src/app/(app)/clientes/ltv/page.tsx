@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { History } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { Header } from "@/components/header";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -16,6 +16,7 @@ import { formatarMoeda, formatarData } from "@/lib/formatters";
 import { PACOTES } from "@/types/cliente";
 import type { Cliente } from "@/types/cliente";
 import { LtvFilters } from "./ltv-filters";
+import { LtvAcoes } from "./ltv-acoes";
 
 interface PageProps {
   searchParams: Promise<{
@@ -92,10 +93,8 @@ export default async function LtvPage({ searchParams }: PageProps) {
   };
 
   return (
-    <>
-      <Header titulo="LTV - Lifetime Value" />
-
-      <div className="space-y-4 p-6">
+    <div className="space-y-4">
+      <PageHeader titulo="LTV - Lifetime Value" subtitulo="Histórico de clientes e lifetime value" />
         {/* Cards de métricas */}
         <div className="grid gap-4 sm:grid-cols-3">
           <Card className="border-zinc-800 bg-zinc-900">
@@ -215,11 +214,7 @@ export default async function LtvPage({ searchParams }: PageProps) {
                         {cliente.motivo_churn || "—"}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
-                        <Link href={`/clientes/${cliente.id}`}>
-                          <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white text-xs">
-                            Ver detalhes
-                          </Button>
-                        </Link>
+                        <LtvAcoes clienteId={cliente.id} clienteNome={cliente.nome} />
                       </TableCell>
                     </TableRow>
                   );
@@ -228,7 +223,6 @@ export default async function LtvPage({ searchParams }: PageProps) {
             </Table>
           </div>
         )}
-      </div>
-    </>
+    </div>
   );
 }

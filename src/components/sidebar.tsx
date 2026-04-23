@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { toast } from "sonner";
 import {
   LayoutDashboard,
   Users,
@@ -11,11 +12,12 @@ import {
   TrendingUp,
   Briefcase,
   UserCog,
-  ChevronDown,
+  ChevronRight,
   BookUser,
   History,
   BarChart3,
   Receipt,
+  LogOut,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -31,24 +33,28 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 
-/** Itens futuros do menu */
+/** Itens futuros */
 const menuFuturo = [
-  { href: "#", label: "Comercial", icon: TrendingUp },
-  { href: "#", label: "Operacional", icon: Briefcase },
-  { href: "#", label: "Equipe", icon: UserCog },
+  { label: "Comercial", icon: TrendingUp },
+  { label: "Operacional", icon: Briefcase },
+  { label: "Equipe", icon: UserCog },
 ];
 
-/** Subitens de Clientes */
+/** Subitens */
 const subMenuClientes = [
   { href: "/clientes", label: "Base de Clientes", icon: BookUser },
   { href: "/clientes/ltv", label: "LTV", icon: History },
 ];
-
-/** Subitens de Financeiro */
 const subMenuFinanceiro = [
   { href: "/financeiro", label: "Dashboard", icon: BarChart3 },
   { href: "/financeiro/cobrancas", label: "Cobranças", icon: Receipt },
 ];
+
+/** Classes do item ativo */
+const ativoClasses =
+  "bg-gradient-to-r from-[#E550A5]/10 via-zinc-900/50 to-transparent border-l-2 border-[#E550A5] text-white shadow-[inset_0_0_20px_rgba(229,80,165,0.08)]";
+const inativoClasses =
+  "border-l-2 border-transparent text-zinc-400 hover:bg-zinc-900/60 hover:text-white";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -57,28 +63,49 @@ export function Sidebar() {
   const [clientesAberto, setClientesAberto] = useState(isClientesAtivo);
   const [financeiroAberto, setFinanceiroAberto] = useState(isFinanceiroAtivo);
 
-  function renderSubMenu(
-    items: { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[],
+  function isSubAtivo(
+    href: string,
+    basePath: string,
+    allItems: { href: string }[]
+  ) {
+    if (href === basePath) {
+      return (
+        pathname === basePath ||
+        (pathname.startsWith(basePath + "/") &&
+          !allItems.some(
+            (o) => o.href !== basePath && pathname.startsWith(o.href)
+          ))
+      );
+    }
+    return pathname.startsWith(href);
+  }
+
+  function renderSubItems(
+    items: {
+      href: string;
+      label: string;
+      icon: React.ComponentType<{ className?: string }>;
+    }[],
     basePath: string
   ) {
     return (
-      <div className="ml-4 mt-1 space-y-1 border-l border-zinc-800 pl-3">
+      <div className="mt-1 space-y-0.5 pl-5">
         {items.map((sub) => {
-          const isSubAtivo =
-            sub.href === basePath
-              ? pathname === basePath || (pathname.startsWith(basePath + "/") && !items.some((o) => o.href !== basePath && pathname.startsWith(o.href)))
-              : pathname.startsWith(sub.href);
+          const ativo = isSubAtivo(sub.href, basePath, items);
           return (
             <Link key={sub.href} href={sub.href}>
               <div
                 className={cn(
-                  "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors",
-                  isSubAtivo
-                    ? "bg-zinc-800 text-white font-medium"
-                    : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-300"
+                  "flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium transition-all duration-200 cursor-pointer",
+                  ativo ? ativoClasses : inativoClasses
                 )}
               >
-                <sub.icon className="h-3.5 w-3.5" />
+                <sub.icon
+                  className={cn(
+                    "h-3.5 w-3.5",
+                    ativo ? "text-[#E550A5]" : "text-zinc-500"
+                  )}
+                />
                 {sub.label}
               </div>
             </Link>
@@ -89,102 +116,177 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r border-zinc-800 bg-zinc-950">
-      {/* Logo */}
-      <div className="flex items-center justify-center border-b border-zinc-800 px-5 py-5">
+    <aside className="flex h-screen w-64 flex-col bg-[#0A0A0F] border-r border-zinc-900/50">
+      {/* Topo: Logo + marca */}
+      <div className="px-5 pt-6 pb-5 border-b border-zinc-900/50">
         <Image
           src="/Logo_INSIDE-02.svg"
           alt="Inside"
-          width={160}
-          height={64}
-          style={{ height: "64px", width: "auto" }}
+          width={140}
+          height={48}
+          style={{ height: "48px", width: "auto" }}
           priority
         />
+        <div className="mt-3">
+          <p className="text-lg font-bold text-white leading-tight">Inside</p>
+          <p
+            className="text-xs font-medium bg-clip-text text-transparent"
+            style={{
+              backgroundImage:
+                "linear-gradient(90deg, #2D7CDB 0%, #7B3FC9 50%, #E550A5 100%)",
+            }}
+          >
+            Sistema de Gestão
+          </p>
+        </div>
       </div>
 
-      {/* Navegação */}
-      <nav className="flex-1 space-y-1 px-3 py-4">
-        <TooltipProvider delay={0}>
-          {/* Dashboard */}
-          <Link href="/">
-            <div
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                pathname === "/"
-                  ? "bg-zinc-800 text-white"
-                  : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
-              )}
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              Dashboard
-            </div>
-          </Link>
+      {/* Menu */}
+      <nav className="flex-1 overflow-y-auto px-3 py-5">
+        <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
+          Menu
+        </p>
 
-          {/* Clientes */}
-          <Collapsible open={clientesAberto} onOpenChange={setClientesAberto}>
-            <CollapsibleTrigger
-              className={cn(
-                "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                isClientesAtivo ? "text-white" : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
-              )}
-            >
-              <Users className="h-4 w-4" />
-              Clientes
-              <ChevronDown className="ml-auto h-3 w-3 transition-transform [[data-panel-open]_&]:rotate-180" />
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              {renderSubMenu(subMenuClientes, "/clientes")}
-            </CollapsibleContent>
-          </Collapsible>
+        <div className="space-y-1">
+          <TooltipProvider delay={0}>
+            {/* Dashboard */}
+            <Link href="/">
+              <div
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer",
+                  pathname === "/" ? ativoClasses : inativoClasses
+                )}
+              >
+                <LayoutDashboard
+                  className={cn(
+                    "h-4 w-4",
+                    pathname === "/" ? "text-[#E550A5]" : "text-zinc-500"
+                  )}
+                />
+                Dashboard
+                <ChevronRight
+                  className={cn(
+                    "ml-auto h-3.5 w-3.5",
+                    pathname === "/" ? "text-[#E550A5]" : "text-zinc-600"
+                  )}
+                />
+              </div>
+            </Link>
 
-          {/* Financeiro */}
-          <Collapsible open={financeiroAberto} onOpenChange={setFinanceiroAberto}>
-            <CollapsibleTrigger
-              className={cn(
-                "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                isFinanceiroAtivo ? "text-white" : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
-              )}
+            {/* Clientes */}
+            <Collapsible
+              open={clientesAberto}
+              onOpenChange={setClientesAberto}
             >
-              <DollarSign className="h-4 w-4" />
-              Financeiro
-              <ChevronDown className="ml-auto h-3 w-3 transition-transform [[data-panel-open]_&]:rotate-180" />
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              {renderSubMenu(subMenuFinanceiro, "/financeiro")}
-            </CollapsibleContent>
-          </Collapsible>
+              <CollapsibleTrigger
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer",
+                  isClientesAtivo ? ativoClasses : inativoClasses
+                )}
+              >
+                <Users
+                  className={cn(
+                    "h-4 w-4",
+                    isClientesAtivo ? "text-[#E550A5]" : "text-zinc-500"
+                  )}
+                />
+                Clientes
+                <ChevronRight
+                  className={cn(
+                    "ml-auto h-3.5 w-3.5 transition-transform duration-200",
+                    clientesAberto && "rotate-90",
+                    isClientesAtivo ? "text-[#E550A5]" : "text-zinc-600"
+                  )}
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                {renderSubItems(subMenuClientes, "/clientes")}
+              </CollapsibleContent>
+            </Collapsible>
 
-          {/* Itens futuros */}
-          {menuFuturo.map((item) => (
-            <Tooltip key={item.label}>
-              <TooltipTrigger render={<div />}>
-                <div className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium cursor-not-allowed text-zinc-600">
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                  <span className="ml-auto text-[10px] uppercase tracking-wider text-zinc-600">
-                    Em breve
-                  </span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <p>Em breve</p>
-              </TooltipContent>
-            </Tooltip>
-          ))}
-        </TooltipProvider>
+            {/* Financeiro */}
+            <Collapsible
+              open={financeiroAberto}
+              onOpenChange={setFinanceiroAberto}
+            >
+              <CollapsibleTrigger
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer",
+                  isFinanceiroAtivo ? ativoClasses : inativoClasses
+                )}
+              >
+                <DollarSign
+                  className={cn(
+                    "h-4 w-4",
+                    isFinanceiroAtivo ? "text-[#E550A5]" : "text-zinc-500"
+                  )}
+                />
+                Financeiro
+                <ChevronRight
+                  className={cn(
+                    "ml-auto h-3.5 w-3.5 transition-transform duration-200",
+                    financeiroAberto && "rotate-90",
+                    isFinanceiroAtivo ? "text-[#E550A5]" : "text-zinc-600"
+                  )}
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                {renderSubItems(subMenuFinanceiro, "/financeiro")}
+              </CollapsibleContent>
+            </Collapsible>
+
+            {/* Itens futuros */}
+            {menuFuturo.map((item) => (
+              <Tooltip key={item.label}>
+                <TooltipTrigger render={<div />}>
+                  <div className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium cursor-not-allowed text-zinc-700 border-l-2 border-transparent">
+                    <item.icon className="h-4 w-4" />
+                    {item.label}
+                    <span className="ml-auto text-[9px] uppercase tracking-wider text-zinc-700 bg-zinc-900/50 px-1.5 py-0.5 rounded">
+                      Em breve
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>Em breve</p>
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </TooltipProvider>
+        </div>
       </nav>
 
-      {/* Rodapé */}
-      <div className="border-t border-zinc-800 px-4 py-3">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-zinc-800 text-xs text-zinc-300">JP</AvatarFallback>
+      {/* Rodapé: usuário */}
+      <div className="mt-auto border-t border-zinc-900/50 px-3 py-4 space-y-2">
+        <div className="flex items-center gap-3 rounded-lg bg-zinc-900/30 px-3 py-3">
+          <Avatar className="h-10 w-10">
+            <AvatarFallback
+              className="text-sm font-bold text-white"
+              style={{
+                backgroundImage:
+                  "linear-gradient(135deg, #2D7CDB 0%, #E550A5 100%)",
+              }}
+            >
+              J
+            </AvatarFallback>
           </Avatar>
-          <div className="flex flex-col">
-            <span className="text-sm font-medium text-zinc-200">Jéssica</span>
-            <span className="text-xs text-zinc-500">Admin</span>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-medium text-white">Jéssica</span>
+            <span className="text-[11px] text-zinc-500 truncate">
+              contato@insidetrafegopago.com
+            </span>
           </div>
         </div>
+
+        <button
+          onClick={() =>
+            toast.info("Funcionalidade de login em desenvolvimento")
+          }
+          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-500 hover:text-white hover:bg-zinc-900/50 transition-colors duration-200 cursor-not-allowed opacity-60"
+        >
+          <LogOut className="h-4 w-4" />
+          Sair
+        </button>
       </div>
     </aside>
   );

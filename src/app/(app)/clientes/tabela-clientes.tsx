@@ -2,18 +2,26 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { X } from "lucide-react";
+import { X, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -40,6 +48,8 @@ import {
   atualizarPacoteCliente,
   marcarChurn,
   marcarChurnEmMassa,
+  excluirCliente,
+  excluirClientesEmMassa,
 } from "./actions";
 import {
   STATUS_CLIENTE,
@@ -69,7 +79,11 @@ function getLabelStatus(value: string) {
 }
 
 export function TabelaClientes({ clientes }: TabelaClientesProps) {
+  const router = useRouter();
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [excluirDialog, setExcluirDialog] = useState<{ id: string; nome: string } | null>(null);
+  const [excluirMassaDialog, setExcluirMassaDialog] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
   const [dialogMassa, setDialogMassa] = useState<{
     campo: CampoMassa;
     label: string;
@@ -184,6 +198,24 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
     setValorMassa("");
   }
 
+  async function handleExcluir() {
+    if (!excluirDialog) return;
+    setExcluindo(true);
+    const res = await excluirCliente(excluirDialog.id);
+    if (res.error) { toast.error(res.error); } else { toast.success("Cliente excluído com sucesso"); }
+    setExcluindo(false);
+    setExcluirDialog(null);
+  }
+
+  async function handleExcluirMassa() {
+    const ids = Array.from(selecionados);
+    setExcluindo(true);
+    const res = await excluirClientesEmMassa(ids);
+    if (res.error) { toast.error(res.error); } else { toast.success(`${res.count} clientes excluídos`); setSelecionados(new Set()); }
+    setExcluindo(false);
+    setExcluirMassaDialog(false);
+  }
+
   function getOpcoesLabel(campo: CampoMassa, valor: string): string {
     if (campo === "status") return getLabelStatus(valor);
     return valor;
@@ -212,6 +244,16 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
               {op.label}
             </Button>
           ))}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1 text-xs text-red-400 hover:text-red-300"
+            onClick={() => setExcluirMassaDialog(true)}
+          >
+            <Trash2 className="h-3 w-3" />
+            Excluir selecionados
+          </Button>
 
           <Button
             variant="ghost"
@@ -355,13 +397,23 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
                 <TableCell className="text-zinc-400 whitespace-nowrap">
                   {formatarData(cliente.fim_contrato)}
                 </TableCell>
-                {/* Ação */}
+                {/* Ações */}
                 <TableCell className="text-right whitespace-nowrap">
-                  <Link href={`/clientes/${cliente.id}`}>
-                    <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white text-xs">
-                      Ver/Editar
-                    </Button>
-                  </Link>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-zinc-400 hover:text-white" />}>
+                      <MoreHorizontal className="h-4 w-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="border-zinc-800 bg-zinc-950">
+                      <DropdownMenuItem className="text-zinc-300 gap-2" onClick={() => router.push(`/clientes/${cliente.id}`)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                        Ver/Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="text-red-400 gap-2" onClick={() => setExcluirDialog({ id: cliente.id, nome: cliente.nome })}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Excluir cliente
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}
@@ -438,6 +490,47 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
             <Button variant="destructive" onClick={confirmarChurn} disabled={!dataSaidaChurn}>
               Confirmar churn
               {churnDialog?.tipo === "massa" && ` (${selecionados.size} clientes)`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de exclusão individual */}
+      <Dialog open={!!excluirDialog} onOpenChange={(open) => { if (!open) setExcluirDialog(null); }}>
+        <DialogContent className="border-zinc-800 bg-zinc-900">
+          <DialogHeader>
+            <DialogTitle className="text-zinc-200">Excluir cliente definitivamente?</DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              Esta ação não pode ser desfeita. Todos os dados do cliente{" "}
+              <strong className="text-zinc-200">{excluirDialog?.nome}</strong>{" "}
+              serão removidos permanentemente, incluindo TODAS as suas faturas.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" className="text-zinc-400 hover:text-white" onClick={() => setExcluirDialog(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleExcluir} disabled={excluindo}>
+              {excluindo && <span className="mr-2 h-4 w-4 animate-spin inline-block border-2 border-current border-t-transparent rounded-full" />}
+              Sim, excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de exclusão em massa */}
+      <Dialog open={excluirMassaDialog} onOpenChange={(open) => { if (!open) setExcluirMassaDialog(false); }}>
+        <DialogContent className="border-zinc-800 bg-zinc-900">
+          <DialogHeader>
+            <DialogTitle className="text-zinc-200">Excluir {selecionados.size} clientes?</DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              Esta ação não pode ser desfeita. Todos os dados dos clientes selecionados
+              serão removidos permanentemente, incluindo TODAS as suas faturas.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" className="text-zinc-400 hover:text-white" onClick={() => setExcluirMassaDialog(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleExcluirMassa} disabled={excluindo}>
+              {excluindo && <span className="mr-2 h-4 w-4 animate-spin inline-block border-2 border-current border-t-transparent rounded-full" />}
+              Sim, excluir {selecionados.size} clientes
             </Button>
           </DialogFooter>
         </DialogContent>

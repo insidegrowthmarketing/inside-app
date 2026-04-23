@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Header } from "@/components/header";
+import { PageHeader } from "@/components/page-header";
 import { createClient } from "@/lib/supabase/server";
 import { BotaoExcluir } from "./botao-excluir";
 import { ClienteTabs } from "./cliente-tabs";
@@ -23,7 +23,6 @@ export default async function DetalhesClientePage({ params }: PageProps) {
     notFound();
   }
 
-  // Buscar faturas do cliente
   const { data: faturas } = await supabase
     .from("faturas")
     .select("*")
@@ -31,13 +30,13 @@ export default async function DetalhesClientePage({ params }: PageProps) {
     .order("data_vencimento", { ascending: false });
 
   return (
-    <>
-      <Header titulo={cliente.nome}>
+    <div>
+      <PageHeader titulo={cliente.nome} subtitulo="Editar informações do cliente">
         <BotaoExcluir clienteId={cliente.id} clienteNome={cliente.nome} />
-      </Header>
-      <div className="mx-auto max-w-3xl p-6">
+      </PageHeader>
+      <div className="mx-auto max-w-3xl">
         <ClienteTabs cliente={cliente} faturas={(faturas ?? []) as Fatura[]} />
       </div>
-    </>
+    </div>
   );
 }

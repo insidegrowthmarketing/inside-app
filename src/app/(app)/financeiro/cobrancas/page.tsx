@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { Header } from "@/components/header";
+import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { DollarSign } from "lucide-react";
 import { FiltrosFaturas } from "./filtros-faturas";
@@ -103,10 +103,8 @@ export default async function CobrancasPage({ searchParams }: PageProps) {
   };
 
   return (
-    <>
-      <Header titulo="Cobranças" />
-
-      <div className="space-y-4 p-6">
+    <div className="space-y-4">
+      <PageHeader titulo="Cobranças" subtitulo="Todas as faturas do sistema" />
         <FiltrosFaturas filtros={filtros} mesesDisponiveis={mesesDisponiveis} />
 
         {lista.length === 0 ? (
@@ -124,7 +122,6 @@ export default async function CobrancasPage({ searchParams }: PageProps) {
         ) : (
           <TabelaFaturas faturas={lista} />
         )}
-      </div>
-    </>
+    </div>
   );
 }

@@ -8,7 +8,7 @@ import {
   Clock,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { Header } from "@/components/header";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
@@ -151,11 +151,8 @@ export default async function DashboardPage() {
   });
 
   return (
-    <>
-      <Header titulo="Dashboard" />
-
-      <div className="space-y-6 p-6">
-        <p className="text-sm text-zinc-500">Visão geral da Inside</p>
+    <div className="space-y-6">
+      <PageHeader titulo="Dashboard" subtitulo="Visão geral da Inside" />
 
         {/* Cards numéricos */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
@@ -377,7 +374,6 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
-    </>
+    </div>
   );
 }

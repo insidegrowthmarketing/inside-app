@@ -1,0 +1,75 @@
+Cliente,Valor mensal,Forma pagamento,Região,Fuso 1,Fuso 2,GP,Gestor,Inicio Contrato,Fim Contrato,OBS,Responsável Financeiro,Contato Financeiro,Data de pagamento,CRM?
+EUA - C&A Beauty Studio ,$400,Stripe brasil semanal,São Francisco,-4h,,Gabriela,Lucas,04/02/25,,,Cristiano,1 (650) 333-1453,,
+EUA - Dritto,$1.200,Transferência BOFA,Califórnia,-4h,,Aline,Ana Luiza,10/04/25,,Aviso prévio até 08/05,Adelice,1 (415) 574-8388,transferencia quinzenal todo dia 05 e 20 do mes,
+EUA - Brazilian beauty,$600,Stripe brasil semanal,Carolina do Sul,-1h,,Aline,Ana Luiza,23/04/25,01/05/26,,Jackeline,1 (843) 743-3170,,
+EUA - Maximus Construction,$880,Stripe brasil semanal,Fort Myers,-1h,,Gabriela,Lucas,07/05/25,,Aviso prévio até 01/05,Victor,1 (321) 271-0747,,
+EUA - TEO Silva Eletric,$880,Stripe brasil semanal,São Francisco,-4h,,Bruna,Samara,08/07/25,,Aviso prévio até 07/05 ,Teo,1 (415) 489-8127,,
+EUA - Carol G beauty,$640,Stripe brasil semanal,São Francisco,-4h,,Sérgio,Rodrigo,21/08/25,,,Caroline Gomes,1 (510) 621-4756,,
+EUA - Talent General Services,$1.000,Stripe brasil semanal,Sarasota,-1h,,Aline,Ana Luiza,28/08/25,,Aviso Prévio até 06/05,Gustavo Stefenoni,1 (941) 250-0414,Aviso Prévio até 06/05,
+EUA - Quick Plumbing Team,$500,Stripe brasil semanal,Flórida ,-1h,,Gabriela,Lucas,10/09/25,,Novo acordo de $125 a partir de 11/02,Gabriel Gonçalves,1 (516) 673-6747,,
+EUA - Fresh and fluffy,$800,Stripe brasil semanal,Washington,-4h,,Sérgio,Rodrigo,10/09/25,,,Rosangela Sane,1 (425) 900-9068,,
+EUA - JS Wood Floors,$1.000,Stripe eua semanal,New Jersey,-1h,-2h,Gabriela,Lucas,23/10/25,,,,1 (732) 456-2323,,
+EUA - Cellaris Peptides,$1.150,Stripe brasil semanal,Orlando,-1h,-2h,Gabriela,Lucas,24/11/25,,,Marcio Lima,1 (407) 533-9537,,
+EUA - Jet Damage Solutions,$1.000,Stripe eua semanal,Seattle,-4h,-5h,Aline,Ana Luiza,04/12/25,,,Gustavo França,1 (206) 573-8399,,
+EUA - USA Housekeeping,$800,Stripe brasil semanal,Freeport,-2h,-3h,Aline,Ana Luiza,15/12/25,,,Loreci de Souza / Thalita,1 (857) 247-7818 / 1 (850) 924-5407,,
+EUA - Soyer Flooring LLC,$800,Stripe brasil semanal,Atlanta,-1h,-2h,Sérgio,Rodrigo,05/01/26,,,Bruno Soyer,1 (404) 304-7510,,
+EUA - FM Remodeling,$800,ZELLE semanal,Sarasota,-1h,-2h,Gabriela,Lucas,14/01/26,,,Marco Antonio Ramos,1 (941) 592-5282,Cobrar zelle todo sabado,
+EUA - Mazzoni Pro,$720,Stripe brasil semanal,Delaware,-1h,-2h,Sérgio,Rodrigo,19/01/26,,,Leandro Mazzoni,1 (781) 475-8066,,
+EUA - Hartning Floorsinc,$800,Stripe brasil semanal,Pensilvânia,-1h,-2h,Gabriela,Lucas,21/01/26,,,Eduardo Hartning,1 (570) 453-8454,,Não
+EUA - Kepi Tile LLC,$800,Stripe brasil semanal,New Jersey,-1h,-2h,Sérgio,Rodrigo,21/01/26,,aviso prévio até 18/05,Keniel Macedo,1 (201) 328-6988,,Não
+EUA - Peju Remodeling,$1.000,Stripe brasil semanal,Boca Raton,-1h,-2h,Aline,Ana Luiza,26/01/26,,,Alisson Felicio,1 (754) 245-3559,,Sim
+EUA - Faria Pro Construction,$800,Stripe brasil semanal,Massachusetts ,-1h,-2h,Sérgio,Rodrigo,26/01/26,,,João Vitor,1 (774) 225-1247,,Não
+EUA - Empire remodeling,$720,Stripe eua semanal,Massachusetts ,-1h,-2h,Sérgio,Rodrigo,26/01/26,,,Francisco Dias,1 (857) 615-1169,,NA
+EUA - H&J Beauty Salon,$720,Stripe brasil semanal,New Jersey,-1h,-2h,Sérgio,Rodrigo,26/01/26,,,Maria Ferreira,1 (973) 204-3364,,Não
+EUA - JGG Janitorial,$640,Stripe brasil semanal,Massachusetts ,-1h,-2h,Bruna,Samara,28/01/26,,,Maria de Fátima,1 (508) 933-5933,,NA
+EUA - Andrea Barros LLC,$800,Stripe brasil semanal,Orlando,-1h,-2h,Sérgio,Rodrigo,28/01/26,,Aviso Prévio até 14/05,Andrea Barros ,1 (312) 709-2907,,Não
+EUA - C3N Home Improvement,$1.000,Stripe brasil semanal,Massachusetts ,-1h,-2h,Aline,Ana Luiza,30/01/26,,,Cleziomar Oliveira,1 (978) 549-5451,,Sim
+EUA - The Tub Guy,$880,Stripe brasil semanal,New Jersey,-1h,-2h,Sérgio,Rodrigo,02/02/26,,,Renato Tucci,1 (201) 282-1512,,Sim
+EUA - Trust Cleaning,$640,Stripe brasil semanal,Carolina do Sul,-1h,-2h,Bruna,Samara,02/02/26,,Pagamento pausado até liberação do GMB ,Rafael Duarte, 1 (864) 696-7654,,NA
+EUA - Charles Paint Service,$640,ZELLE mensal,Massachusetts ,-1h,-2h,Sérgio,Rodrigo,03/02/26,,,Charles Aguiar,1 (401) 516-8635,zelle mensal todo dia 31,Não
+EUA - VIP Hardwood Floors,$920,ZELLE mensal,Connecticut,-1h,-2h,Aline,Ana Luiza,06/02/26,,,Claudio,1 (203) 650-0712,Cobrar zelle mensal todo dia 06,Sim
+EUA - Altasalt Souzas,$640,Stripe brasil semanal,Draper,-3h,-4h,Sérgio,Rodrigo,06/02/26,,,Amon Souza,1 (801) 471-9602,,Não
+EUA - River Road,$800,Stripe eua semanal,New Jersey,-1h,-2h,Maria Paula,Jean,06/02/26,,,Robert,1 (201) 310-6109,,Não
+EUA - CLJ Brick Pavers,$720,ZELLE mensal,Sarasota,-1h,-2h,Gabriela,Lucas,10/02/26,,Aviso prévio até 13/05,Cleuton Souza,1 (491) 704-9364,Cobrar zelle mensal todo dia 10,Não
+EUA - Car Tech Mobile Detailing,$680,Stripe brasil semanal,Flórida ,-1h,-2h,Sérgio,Rodrigo,10/02/26,,Aviso prévio até 14/05,Yan Barbosa,1 (781) 921-8110,,Não
+EUA - Zion Eletric,$720,ZELLE mensal,São Francisco,-4h,-5h,Bruna,Samara,12/02/26,,,Yonny Munoz,1 (415) 318-9800,Cobrar zelle mensal todo dia 12,Não
+EUA - Lilas Cleaning,$600,Stripe brasil semanal,Everett,-4h,-5h,Sérgio,Rodrigo,12/02/26,,,Lucieli Vargas,1 (425) 585-3541,,NA
+EUA - VGJ Floors covering,$1.200,ZELLE semanal,New Jersey,-1h,-2h,Aline,Ana Luiza,17/02/26,,,Amberson Camargos,1 (732) 768-0854,zelle semanal toda terça,NA
+EUA - Shiny dependable cleaning,$640,ZELLE mensal,Clearwater,-1h,-2h,Bruna,Samara,18/02/26,,,Frank Andrew,1 (727) 225-2992,Cobrar zelle mensal todo dia 18,Não
+EUA - Flooring Guys Lock,$720,Stripe eua mensal,Utah,-4h,-5h,Bruna,Samara,19/02/26,20/05/26,,Rubens Braga,1 (954) 226-7473,,Não
+EUA - VD Trading innovation,$640,Stripe brasil semanal,Maryland,-1h,-2h,Sérgio,Rodrigo,20/02/26,,,Vicente Daniel,1 (301) 383-3645,,Não
+Maids on the go,$640,Stripe brasil semanal,Jacksonville,-1h,-2h,Bruna,Samara,26/02/26,,,Alline Mary Lima,1 (904) 553-3750,,Não
+RD Santos LLC,$950,Stripe brasil semanal,Charlotte,-1h,-2h,Gabriela,Lucas,27/02/26,,,Rogério Santos,1 (678) 308-3007,,Não
+30A Flooring & Bath,$800,Stripe eua mensal,Destin,-2h,-3h,Gabriela,Lucas,27/02/26,27/03/26,APENAS ESTRUTURAÇÃO ,Cacio,1 (850) 842-1789,,Não
+Contemporany flooring,$880,Stripe brasil semanal,Orlando,-1h,-2h,Aline,Ana Luiza,27/02/26,,,Renato Lessa,1 (407) 282 5700,,Sim
+Elisha Rudders,$720,ZELLE semanal,Flórida ,-1h,-2h,Bruna,Samara,28/02/26,,,Eliseu Lemes,1 (239) 823-6221,Zelle semanal toda quinta,Não
+SF Cleaning / Lions Pro painting,$1.280,Stripe eua semanal,Boston,-1h,-2h,Gabriela,Lucas,03/03/26,,,Selma Faria,1 (857) 222-6741,,Não
+Lucianas Cleaning services,$680,ZELLE mensal,Massachusetts ,-1h,-2h,Bruna,Samara,03/03/26,,Aviso prévio até 20/05,Luciana Silva,1 (774) 320-0055,Cobrar zelle mensal todo dia 04,Não
+AG renovation & remodeling,$640,Stripe brasil semanal,Fort Myers,-1h,-2h,Gabriela,Lucas,06/03/26,10/04/26,APENAS ESTRUTURAÇÃO ,Ary Nogueira,1 (239) 257-8231,,Não
+Ann's Cleaning,$800,Stripe brasil semanal,Massachusetts ,-1h,-2h,Aline,Ana Luiza,06/03/26,,,Anyely Lisarb,1 (339) 242-1988,,Não
+Erbi Motors,$1.500,Stripe eua mensal,Jacksonville,-1h,-2h,Sérgio,Rodrigo,05/03/26,,,Pablo Costa,1 (508) 808-3725,,Sim
+Keilas House Cleaning,$800,ZELLE semanal,North Caroline ,-1h,,Gabriela,Lucas,10/03/26,,,Keila Waldron,1 (201) 212-1923,zelle semanal toda terça,Não
+Invictos Services,$880,Stripe brasil semanal,Connecticut,-1h,,Aline,Ana Luiza,11/03/26,15/04/26,APENAS ESTRUTURAÇÃO ,Caio Victor,1 (860) 539-3445,,Não
+Miss Sonia Cleaning,$640,ZELLE semanal,"Tampa, FL",-1h,,Bruna,Samara,12/03/26,16/04/26,APENAS ESTRUTURAÇÃO ,Sonia Neves,1 (504) 346-8049,,Não
+WPS Remodeling,$1.040,Stripe brasil semanal,Connecticut,-1h,,Bruna,Samara,15/03/26,,,Wallison Santos,1 (860) 304-6068,,Não
+Royal Demolition,$720,ZELLE semanal,San Francisco,-4h,,Gabriela,Lucas,16/03/26,,,Diogo Silva,1 (415) 215-3391,zelle semanal toda segunda,Não
+Boston Pro Quality services,$640,Stripe brasil mensal,Massachusetts ,-1h,,Sérgio,Eliane,18/03/26,,,Patrick Souza,1 (857) 233-6185,,Não
+SG Cleaning,$720,Stripe brasil semanal,Massachusetts ,-1h,,Sérgio,Eliane,23/03/26,27/04/26,APENAS ESTRUTURAÇÃO ,Scarlet Gomes,1 (774) 386-2705,,Não
+Francii Cleaning Services,$880,ZELLE mensal,Massachusetts ,-1h,,Sérgio,Rodrigo,23/03/26,,,Francisca Oliveira,1 (978) 905-0993,zelle mensal todo dia 23,Não
+RSF Cleaning and Maintenance,$720,Stripe brasil semanal,Manchester,-1h,,Sérgio,Rodrigo,24/03/26,,,Ronaldo Santos,1 (603) 438-8179,,Não
+Ana Paula Cleaning,$720,Stripe brasil semanal,Pensilvânia,-1h,,Bruna,Samara,25/03/26,,,Ana Paula,1 (412) 402-8514,,Não
+United OAK wood,$1.120,Stripe brasil semanal,New Jersey,-1h,,Bruna,Samara,28/03/26,,,Brenno Lacerda,1 (862) 201-1370,,Não
+Sparkle Pro Cleaning Services,$640,Stripe brasil semanal,Orlando,-1h,,Sérgio,Eliane,31/03/26,05/05/26,APENAS ESTRUTURAÇÃO ,Jeferson Carvalho,1 (650) 201-8832,,Não
+Maui Fresh cleaning co,$960,Stripe brasil semanal,Califórnia,-4h,,Gerlaine,Gabriel,02/04/26,07/05/26,APENAS ESTRUTURAÇÃO ,Breno Fernandes,1 (424) 466-9053,,Não
+Minas Tile,$1.000,ZELLE quinzenal,"Tampa, FL",-1h,,Sérgio,Rodrigo,06/04/26,,,Romulo Gomes,1 (813) 898-3037,zelle quinzenal todo dia 05 e 20 ,Não
+Alfa Painting,$800,ZELLE semanal,Massachusetts ,-1h,,Bruna,Samara,14/04/26,,,Cleonilto Barbosa,1 (401) 771-4701,zelle toda segunda,Não
+Cariman Construction,$800,ZELLE semanal,"Tampa, FL",-1h,,Sérgio,Rodrigo,12/04/26,,,Josias Francisco,1 (978) 960-1346,zelle toda segunda,Não
+Empire GS Construction,$880,Stripe brasil semanal,Massachusetts ,-1h,,Bruna,Samara,12/04/26,,,Geantoni Sousa,1 (978) 320-1963,,Não
+Cristina House Cleaning,$1.040,Stripe brasil semanal,Seattle,-4h,,Gerlaine,Gabriel,14/04/26,19/05/26,APENAS ESTRUTURAÇÃO ,Cristina Lozano,1 (206) 742-9375,,Não
+O.F Cleaning service,$1.040,Stripe brasil semanal,Massachusetts ,-1h,,Gabriela,Lucas,15/04/26,20/05/26,APENAS ESTRUTURAÇÃO ,Oswar Baez,1 (508) 837-8103,,Não
+Melo tiles services,$1.040,Stripe brasil semanal,Orlando,-1h,,Gerlaine,Gabriel,16/04/26,,,Anderson Melo,1 321 467 3567,,Não
+Premium Cleaning care,$1.400,Stripe brasil semanal,Massachusetts ,-1h,,Gabriela,Lucas,14/04/26,,,Victoria de Medeiros,1 (240) 475-8551,,Sim
+SMK General Service,$800,Stripe brasil semanal,Flórida ,-1h,,Gabriela,Lucas,15/04/26,,,Marcio Santos,1 813 568 8467,,Sim
+LS Elite cleaning,$800,ZELLE semanal,Flórida ,-1h,,Gabriela,Lucas,15/04/26,,,Sandra Santos,1 813 537 9563,zelle toda quinta,Sim
+Rodrigues SG,$880,Stripe brasil semanal,Massachusetts ,-1h,,Gerlaine,Gabriel,20/04/26,25/05/26,APENAS ESTRUTURAÇÃO ,Ana Costa,1 774 707 6448,,Não
+ACM Usa Services,$720,Stripe brasil semanal,Pompano beach,-1h,,Bruna,Samara,20/04/26,25/05/26,APENAS ESTRUTURAÇÃO ,Claudio Vinicius,15083773774,,

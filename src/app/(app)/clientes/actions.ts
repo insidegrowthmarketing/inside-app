@@ -75,7 +75,7 @@ export async function atualizarCliente(id: string, formData: unknown) {
   redirect(`/clientes/${id}`);
 }
 
-/** Exclui um cliente do Supabase */
+/** Exclui um cliente do Supabase (faturas são deletadas via CASCADE) */
 export async function excluirCliente(id: string) {
   const supabase = await createClient();
 
@@ -87,7 +87,28 @@ export async function excluirCliente(id: string) {
   }
 
   revalidatePath("/clientes");
-  redirect("/clientes");
+  revalidatePath("/clientes/ltv");
+  revalidatePath("/financeiro");
+  revalidatePath("/financeiro/cobrancas");
+  return { success: true };
+}
+
+/** Exclui múltiplos clientes em massa */
+export async function excluirClientesEmMassa(ids: string[]) {
+  const supabase = await createClient();
+
+  const { error } = await supabase.from("clientes").delete().in("id", ids);
+
+  if (error) {
+    console.error("Erro ao excluir clientes em massa:", error);
+    return { error: "Erro ao excluir clientes. Tente novamente." };
+  }
+
+  revalidatePath("/clientes");
+  revalidatePath("/clientes/ltv");
+  revalidatePath("/financeiro");
+  revalidatePath("/financeiro/cobrancas");
+  return { success: true, count: ids.length };
 }
 
 /** Atualiza um campo individual de um cliente (dropdown inline) */

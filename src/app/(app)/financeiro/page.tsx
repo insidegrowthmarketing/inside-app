@@ -8,7 +8,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { Header } from "@/components/header";
+import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -121,15 +121,12 @@ export default async function FinanceiroPage() {
   const listaAtrasadas = (atrasadas ?? []) as (Fatura & { clientes: { nome: string; id: string } | null })[];
 
   return (
-    <>
-      <Header titulo="Financeiro">
+    <div className="space-y-6">
+      <PageHeader titulo="Financeiro" subtitulo="Controle de cobranças e recebimentos">
         <GerarFaturasButton />
-      </Header>
+      </PageHeader>
 
       <AutoCuraToast faturasGeradas={autoCura.count} />
-
-      <div className="space-y-6 p-6">
-        <p className="text-sm text-zinc-500">Controle de cobranças e recebimentos</p>
 
         {/* Cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
@@ -255,7 +252,6 @@ export default async function FinanceiroPage() {
             )}
           </CardContent>
         </Card>
-      </div>
-    </>
+    </div>
   );
 }

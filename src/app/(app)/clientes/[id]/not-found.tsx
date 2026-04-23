@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { Header } from "@/components/header";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 
 export default function ClienteNaoEncontrado() {
   return (
-    <>
-      <Header titulo="Cliente não encontrado" />
+    <div>
+      <PageHeader titulo="Cliente não encontrado" />
       <div className="flex flex-col items-center justify-center py-32">
         <p className="mb-1 text-lg font-medium text-zinc-300">
           Cliente não encontrado
@@ -19,6 +19,6 @@ export default function ClienteNaoEncontrado() {
           </Button>
         </Link>
       </div>
-    </>
+    </div>
   );
 }

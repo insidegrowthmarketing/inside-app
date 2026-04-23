@@ -1,13 +1,13 @@
-import { Header } from "@/components/header";
+import { PageHeader } from "@/components/page-header";
 import { ClienteForm } from "@/components/cliente-form";
 
 export default function NovoClientePage() {
   return (
-    <>
-      <Header titulo="Novo cliente" />
-      <div className="mx-auto max-w-3xl p-6">
+    <div>
+      <PageHeader titulo="Novo cliente" subtitulo="Cadastre um novo cliente no sistema" />
+      <div className="mx-auto max-w-3xl">
         <ClienteForm />
       </div>
-    </>
+    </div>
   );
 }

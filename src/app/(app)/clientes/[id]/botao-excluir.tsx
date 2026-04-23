@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ interface BotaoExcluirProps {
 }
 
 export function BotaoExcluir({ clienteId, clienteNome }: BotaoExcluirProps) {
+  const router = useRouter();
   const [aberto, setAberto] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
 
@@ -34,6 +36,7 @@ export function BotaoExcluir({ clienteId, clienteNome }: BotaoExcluirProps) {
       setAberto(false);
     } else {
       toast.success("Cliente excluído com sucesso.");
+      router.push("/clientes");
     }
   };
 
@@ -49,25 +52,18 @@ export function BotaoExcluir({ clienteId, clienteNome }: BotaoExcluirProps) {
       </DialogTrigger>
       <DialogContent className="border-zinc-800 bg-zinc-900">
         <DialogHeader>
-          <DialogTitle className="text-zinc-200">Excluir cliente</DialogTitle>
+          <DialogTitle className="text-zinc-200">Excluir cliente definitivamente?</DialogTitle>
           <DialogDescription className="text-zinc-400">
-            Tem certeza que deseja excluir <strong className="text-zinc-200">{clienteNome}</strong>?
-            Essa ação não pode ser desfeita.
+            Esta ação não pode ser desfeita. Todos os dados do cliente{" "}
+            <strong className="text-zinc-200">{clienteNome}</strong>{" "}
+            serão removidos permanentemente, incluindo TODAS as suas faturas (pagas, pendentes e canceladas).
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2">
-          <Button
-            variant="ghost"
-            className="text-zinc-400 hover:text-white"
-            onClick={() => setAberto(false)}
-          >
+          <Button variant="ghost" className="text-zinc-400 hover:text-white" onClick={() => setAberto(false)}>
             Cancelar
           </Button>
-          <Button
-            variant="destructive"
-            onClick={handleExcluir}
-            disabled={excluindo}
-          >
+          <Button variant="destructive" onClick={handleExcluir} disabled={excluindo}>
             {excluindo && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Sim, excluir
           </Button>

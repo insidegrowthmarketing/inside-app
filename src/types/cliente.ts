@@ -62,8 +62,10 @@ export const GESTORES_TRAFEGO = [
   "Ana Luiza",
   "Lucas",
   "Rodrigo",
-  "Gabriel Samara",
   "Luiz Felipe",
+  "Samara",
+  "Gabriel",
+  "Eliane",
 ] as const;
 
 /** Formas de pagamento aceitas */
@@ -100,6 +102,7 @@ export const FUSOS_HORARIOS = [
   { value: "new_jersey", label: "New Jersey", timezone: "America/New_York" },
   { value: "north_carolina", label: "North Carolina", timezone: "America/New_York" },
   { value: "orlando_fl", label: "Orlando, FL", timezone: "America/New_York" },
+  { value: "pompano_beach_fl", label: "Pompano Beach, FL", timezone: "America/New_York" },
   { value: "pennsylvania", label: "Pennsylvania", timezone: "America/New_York" },
   { value: "sarasota_fl", label: "Sarasota, FL", timezone: "America/New_York" },
   { value: "south_carolina", label: "South Carolina", timezone: "America/New_York" },
