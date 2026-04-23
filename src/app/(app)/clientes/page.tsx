@@ -16,6 +16,7 @@ interface PageProps {
     gestor_projetos?: string;
     gestor_trafego?: string;
     pacote?: string;
+    pais?: string;
   }>;
 }
 
@@ -27,7 +28,7 @@ export default async function ClientesPage({ searchParams }: PageProps) {
     .from("clientes")
     .select("*")
     .neq("status", "churn")
-    .order("created_at", { ascending: false });
+    .order("inicio_contrato", { ascending: true, nullsFirst: false });
 
   if (params.status && params.status !== "todos") {
     query = query.eq("status", params.status);
@@ -47,6 +48,11 @@ export default async function ClientesPage({ searchParams }: PageProps) {
   if (params.pacote && params.pacote !== "todos") {
     query = query.eq("pacote", params.pacote);
   }
+  if (params.pais === "brasil") {
+    query = query.eq("moeda", "BRL");
+  } else if (params.pais === "eua") {
+    query = query.eq("moeda", "USD");
+  }
 
   const { data: clientes, error } = await query;
   if (error) console.error("Erro ao buscar clientes:", error);
@@ -57,6 +63,7 @@ export default async function ClientesPage({ searchParams }: PageProps) {
     gestor_projetos: params.gestor_projetos || "todos",
     gestor_trafego: params.gestor_trafego || "todos",
     pacote: params.pacote || "todos",
+    pais: params.pais || "todos",
     busca: params.busca || "",
   };
 

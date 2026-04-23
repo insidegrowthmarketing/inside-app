@@ -40,7 +40,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatarMoeda, formatarData } from "@/lib/formatters";
+import { formatarMoeda, formatarData, formatarDiaPagamento } from "@/lib/formatters";
+import { Badge } from "@/components/ui/badge";
 import { formatarFusoHorario } from "@/lib/fuso-horario";
 import {
   atualizarCampoCliente,
@@ -280,11 +281,13 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
               <TableHead className="text-zinc-400 whitespace-nowrap">Pacote</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Fee mensal</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Forma de pagamento</TableHead>
+              <TableHead className="text-zinc-400 whitespace-nowrap">Dia pagamento</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Gestor de projetos</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Gestor de tráfego</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Fuso horário</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Início contrato</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Fim contrato</TableHead>
+              <TableHead className="text-zinc-400 whitespace-nowrap">GHL</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap text-right">Ação</TableHead>
             </TableRow>
           </TableHeader>
@@ -353,6 +356,10 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
                     </SelectContent>
                   </Select>
                 </TableCell>
+                {/* Dia pagamento */}
+                <TableCell className="text-zinc-400 whitespace-nowrap text-xs">
+                  {formatarDiaPagamento(cliente)}
+                </TableCell>
                 {/* Gestor de projetos - dropdown inline */}
                 <TableCell>
                   <Select
@@ -396,6 +403,13 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
                 {/* Fim contrato */}
                 <TableCell className="text-zinc-400 whitespace-nowrap">
                   {formatarData(cliente.fim_contrato)}
+                </TableCell>
+                {/* GHL */}
+                <TableCell className="whitespace-nowrap">
+                  {cliente.contempla_ghl
+                    ? <Badge className="border-0 text-xs bg-green-500/20 text-green-400">Sim</Badge>
+                    : <Badge className="border-0 text-xs bg-zinc-800 text-zinc-500">Não</Badge>
+                  }
                 </TableCell>
                 {/* Ações */}
                 <TableCell className="text-right whitespace-nowrap">

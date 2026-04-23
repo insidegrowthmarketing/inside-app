@@ -19,6 +19,7 @@ interface LtvFiltersProps {
   filtros: {
     gestor_projetos: string;
     gestor_trafego: string;
+    pais: string;
     busca: string;
   };
 }
@@ -52,6 +53,7 @@ export function LtvFilters({ filtros }: LtvFiltersProps) {
   const temFiltroAtivo =
     filtros.gestor_projetos !== "todos" ||
     filtros.gestor_trafego !== "todos" ||
+    filtros.pais !== "todos" ||
     filtros.busca !== "";
 
   const triggerCls = "h-9 w-full border-zinc-800 bg-zinc-950 text-zinc-200 text-sm";
@@ -108,6 +110,18 @@ export function LtvFilters({ filtros }: LtvFiltersProps) {
               {GESTORES_TRAFEGO.map((g) => (
                 <SelectItem key={g} value={g}>{g}</SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1 min-w-[120px] w-[120px]">
+          <Label className="text-xs text-zinc-400">País</Label>
+          <Select value={filtros.pais} onValueChange={(v) => { if (v) atualizarFiltro("pais", v); }}>
+            <SelectTrigger className={triggerCls}><SelectValue placeholder="Todos" /></SelectTrigger>
+            <SelectContent className={contentCls}>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="brasil">Brasil</SelectItem>
+              <SelectItem value="eua">EUA</SelectItem>
             </SelectContent>
           </Select>
         </div>

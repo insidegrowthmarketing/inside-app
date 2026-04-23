@@ -28,6 +28,7 @@ interface ClientesFiltersProps {
     gestor_projetos: string;
     gestor_trafego: string;
     pacote: string;
+    pais: string;
     busca: string;
   };
 }
@@ -66,6 +67,7 @@ export function ClientesFilters({ filtros }: ClientesFiltersProps) {
     filtros.gestor_projetos !== "todos" ||
     filtros.gestor_trafego !== "todos" ||
     filtros.pacote !== "todos" ||
+    filtros.pais !== "todos" ||
     filtros.busca !== "";
 
   const triggerCls = "h-9 w-full border-zinc-800 bg-zinc-950 text-zinc-200 text-sm";
@@ -161,6 +163,18 @@ export function ClientesFilters({ filtros }: ClientesFiltersProps) {
               {PACOTES.map((p) => (
                 <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1 min-w-[120px] w-[120px]">
+          <Label className="text-xs text-zinc-400">País</Label>
+          <Select value={filtros.pais} onValueChange={(v) => { if (v) atualizarFiltro("pais", v); }}>
+            <SelectTrigger className={triggerCls}><SelectValue placeholder="Todos" /></SelectTrigger>
+            <SelectContent className={contentCls}>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="brasil">Brasil</SelectItem>
+              <SelectItem value="eua">EUA</SelectItem>
             </SelectContent>
           </Select>
         </div>
