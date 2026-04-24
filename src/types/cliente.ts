@@ -101,6 +101,7 @@ export const FUSOS_HORARIOS = [
   { value: "florida", label: "Flórida", timezone: "America/New_York" },
   { value: "fort_myers_fl", label: "Fort Myers, FL", timezone: "America/New_York" },
   { value: "freeport_me", label: "Freeport, ME", timezone: "America/New_York" },
+  { value: "gloucester_ma", label: "Gloucester, MA", timezone: "America/New_York" },
   { value: "jacksonville_fl", label: "Jacksonville, FL", timezone: "America/New_York" },
   { value: "jacksonville_nc", label: "Jacksonville, NC", timezone: "America/New_York" },
   { value: "manchester_nh", label: "Manchester, NH", timezone: "America/New_York" },

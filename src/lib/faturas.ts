@@ -1,5 +1,17 @@
 import type { Cliente } from "@/types/cliente";
 
+/** Verifica se o cliente deve ter faturas geradas automaticamente */
+export function clienteGeraFaturasAutomaticamente(cliente: {
+  forma_pagamento?: string | null;
+  status?: string;
+}): boolean {
+  const forma = (cliente.forma_pagamento ?? "").toLowerCase();
+  if (forma.startsWith("stripe")) return false;
+  if (forma === "asaas") return false;
+  if (cliente.status === "onboarding") return false;
+  return true;
+}
+
 /** Frequência de cobrança derivada da forma de pagamento */
 export type Frequencia = "mensal" | "semanal" | "quinzenal";
 

@@ -9,6 +9,7 @@ import {
   gerarFaturasIniciaisDoCliente,
   cancelarFaturasFuturas,
 } from "@/app/(app)/financeiro/actions";
+import { clienteGeraFaturasAutomaticamente } from "@/lib/faturas";
 
 /** Cria um novo cliente e gera faturas automaticamente */
 export async function criarCliente(formData: unknown) {
@@ -32,13 +33,17 @@ export async function criarCliente(formData: unknown) {
     return { error: "Erro ao salvar cliente. Tente novamente." };
   }
 
-  // DEFESA 1: gerar faturas automaticamente (mês atual + 2 meses futuros)
-  const resultado = await gerarFaturasIniciaisDoCliente(data.id);
+  // Gerar faturas apenas para formas que permitem (não Stripe/ASAAS/onboarding)
+  let faturasGeradas = 0;
+  if (clienteGeraFaturasAutomaticamente(parsed.data)) {
+    const resultado = await gerarFaturasIniciaisDoCliente(data.id);
+    faturasGeradas = resultado.count;
+  }
 
   revalidatePath("/clientes");
   revalidatePath("/financeiro");
   revalidatePath("/financeiro/cobrancas");
-  return { clienteId: data.id, faturasGeradas: resultado.count };
+  return { clienteId: data.id, faturasGeradas };
 }
 
 /** Atualiza um cliente e regenera faturas se necessário */
@@ -59,11 +64,14 @@ export async function atualizarCliente(id: string, formData: unknown) {
     return { error: "Erro ao atualizar cliente. Tente novamente." };
   }
 
-  // Se cliente continua ativo, regenerar faturas para cobrir novo padrão
+  // Se cliente continua ativo E não é Stripe/ASAAS, regenerar faturas
   const statusAtual = parsed.data.status;
   let faturasGeradas = 0;
 
-  if ((STATUS_ATIVOS as readonly string[]).includes(statusAtual)) {
+  if (
+    (STATUS_ATIVOS as readonly string[]).includes(statusAtual) &&
+    clienteGeraFaturasAutomaticamente(parsed.data)
+  ) {
     const resultado = await gerarFaturasIniciaisDoCliente(id);
     faturasGeradas = resultado.count;
   }

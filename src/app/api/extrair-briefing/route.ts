@@ -70,7 +70,7 @@ Leia o briefing abaixo e retorne APENAS um JSON válido (sem markdown, sem expli
   "gestor_projetos": "Nome do gestor de projetos ou 'Account'",
   "gestor_trafego": "Nome do gestor de tráfego",
   "head": "Caio ou Jean (se mencionado), ou null",
-  "status": "ongoing",
+  "status": "onboarding",
   "pacote": "pro se tem tráfego/ads no escopo, start se não tem",
   "contempla_ghl": true ou false (se o briefing menciona CRM/GHL contemplado),
   "data_pagamento": número 1-31 se mensal, senão null,
@@ -84,9 +84,18 @@ Regras importantes:
 - Se mencionar Stripe + valor mensal apenas → use "Stripe EUA mensal" (ou Brasil se contexto for BRL)
 - Se mencionar ZELLE → identifique mensal/semanal/quinzenal pelo contexto
 - Se mencionar ASAAS → use "ASAAS"
-- Mapeamento cidade → fuso_horario_value: Gloucester/Boston/Massachusetts → boston_ma ou massachusetts; Orlando/Flórida → orlando_fl ou florida; São Francisco → san_francisco_ca; Nova Jersey → new_jersey; Carolina do Sul → south_carolina
 - Se não conseguir identificar um campo com certeza, retorne null
 - Pacote: "pro" se o escopo menciona "tráfego", "ads", "anúncios"; "start" caso contrário
+- REGRA ESPECIAL: o campo status DEVE SEMPRE ser "onboarding" quando extraído de um briefing, porque representa um cliente novo começando a relação com a agência. Nunca retorne "ongoing" para esse campo.
+
+REGRA CRÍTICA para fuso_horario_value:
+1. Leia a cidade mencionada no briefing (campo 'País / Cidade / Fuso' ou similar).
+2. Se a cidade EXATA estiver nesta lista, use o value correspondente:
+   Atlanta, GA → atlanta_ga | Boca Raton, FL → boca_raton_fl | Boston, MA → boston_ma | Charlotte, NC → charlotte_nc | Clearwater, FL → clearwater_fl | Destin, FL → destin_fl | Draper, UT → draper_ut | Everett, WA → everett_wa | Fort Myers, FL → fort_myers_fl | Freeport, ME → freeport_me | Gloucester, MA → gloucester_ma | Jacksonville, FL → jacksonville_fl | Jacksonville, NC → jacksonville_nc | Manchester, NH → manchester_nh | Orlando, FL → orlando_fl | Pompano Beach, FL → pompano_beach_fl | San Francisco, CA → san_francisco_ca | Sarasota, FL → sarasota_fl | Seattle, WA → seattle_wa | Tampa, FL → tampa_fl
+3. Se a cidade NÃO estiver na lista acima, use o ESTADO genérico:
+   MA → massachusetts | NJ → new_jersey | CT → connecticut | FL → florida | CA → california | PA → pennsylvania | SC → south_carolina | NC → north_carolina | DE → delaware | MD → maryland | UT → utah | WA → washington | Brasil → brasilia_df
+4. NUNCA substitua uma cidade por outra cidade próxima. Se "Gloucester, MA" está na lista, use gloucester_ma. Se NÃO estivesse, use massachusetts (genérico), NUNCA boston_ma.
+5. Em caso de dúvida, prefira SEMPRE o genérico estadual.
 
 BRIEFING:
 ${textoPdf}
@@ -116,6 +125,8 @@ IMPORTANTE: Retorne APENAS o JSON válido, SEM blocos de markdown (sem \`\`\`jso
     // Parsear JSON com tratamento de erro
     try {
       const dados = JSON.parse(respostaLimpa);
+      // Força status onboarding para cliente novo via briefing
+      dados.status = "onboarding";
       return NextResponse.json({ dados });
     } catch (parseErr) {
       console.error("Erro ao parsear JSON da Anthropic:", parseErr);

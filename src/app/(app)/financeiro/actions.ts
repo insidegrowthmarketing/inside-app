@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import {
+  clienteGeraFaturasAutomaticamente,
   getFrequenciaDaFormaPagamento,
   calcularValorFatura,
   gerarDatasFaturas,
@@ -38,6 +39,10 @@ export async function gerarFaturasDoCliente(
   if (!cliente) return { error: "Cliente não encontrado", count: 0 };
 
   const c = cliente as Cliente;
+
+  // Stripe/ASAAS/onboarding: nunca gerar faturas automaticamente
+  if (!clienteGeraFaturasAutomaticamente(c)) return { count: 0 };
+
   const frequencia = getFrequenciaDaFormaPagamento(c.forma_pagamento);
   if (!frequencia) return { count: 0 };
 
@@ -94,7 +99,7 @@ export async function autoCurarFaturas() {
 
   const { data: clientes } = await supabase
     .from("clientes")
-    .select("id, forma_pagamento")
+    .select("id, forma_pagamento, status")
     .in("status", [...STATUS_ATIVOS]);
 
   if (!clientes || clientes.length === 0) return { count: 0 };
@@ -107,6 +112,8 @@ export async function autoCurarFaturas() {
   let totalGeradas = 0;
 
   for (const c of clientes) {
+    // Pular Stripe/ASAAS/onboarding — nunca gerar faturas automaticamente
+    if (!clienteGeraFaturasAutomaticamente(c)) continue;
     if (!getFrequenciaDaFormaPagamento(c.forma_pagamento)) continue;
 
     const { data: futuras } = await supabase
