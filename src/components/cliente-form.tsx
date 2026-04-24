@@ -1,11 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, FileUp } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +42,7 @@ import {
   PACOTES,
   MOEDAS,
   MOTIVOS_CHURN,
+  HEADS,
 } from "@/types/cliente";
 import type { Cliente } from "@/types/cliente";
 
@@ -83,6 +84,7 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
           pacote: cliente.pacote || "start",
           data_saida: cliente.data_saida || null,
           motivo_churn: cliente.motivo_churn || null,
+          head: cliente.head || null,
         }
       : {
           status: "a_iniciar",
@@ -95,6 +97,7 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
           data_pagamento: null,
           dia_semana_pagamento: null,
           dias_pagamento_quinzenal: null,
+          head: null,
         },
   });
 
@@ -188,9 +191,98 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
 
   const quinzenal = watch("dias_pagamento_quinzenal");
 
+  // Upload de briefing PDF
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [analisandoPdf, setAnalisandoPdf] = useState(false);
+
+  async function handleUploadBriefing(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setAnalisandoPdf(true);
+    try {
+      const formData = new FormData();
+      formData.append("pdf", file);
+
+      const res = await fetch("/api/extrair-briefing", {
+        method: "POST",
+        body: formData,
+      });
+
+      const json = await res.json();
+
+      if (!res.ok || json.error) {
+        toast.error(json.error || "Não foi possível extrair os dados. Preencha manualmente.");
+        return;
+      }
+
+      const d = json.dados;
+      if (d.nome) setValue("nome", d.nome);
+      if (d.fee_mensal) setValue("fee_mensal", Number(d.fee_mensal));
+      if (d.moeda) setValue("moeda", d.moeda);
+      if (d.forma_pagamento) setValue("forma_pagamento", d.forma_pagamento);
+      if (d.fuso_horario_value) setValue("fuso_horario", d.fuso_horario_value);
+      if (d.inicio_contrato) setValue("inicio_contrato", d.inicio_contrato);
+      if (d.gestor_projetos) setValue("gestor_projetos", d.gestor_projetos);
+      if (d.gestor_trafego) setValue("gestor_trafego", d.gestor_trafego);
+      if (d.head) setValue("head", d.head);
+      if (d.status) setValue("status", d.status as ClienteFormData["status"]);
+      if (d.pacote) setValue("pacote", d.pacote as ClienteFormData["pacote"]);
+      if (d.contempla_ghl !== undefined) setValue("contempla_ghl", d.contempla_ghl);
+      if (d.responsavel_financeiro) setValue("responsavel_financeiro", d.responsavel_financeiro);
+      if (d.contato_financeiro) setValue("contato_financeiro", d.contato_financeiro);
+      if (d.data_pagamento) setValue("data_pagamento", d.data_pagamento);
+      if (d.dia_semana_pagamento !== null && d.dia_semana_pagamento !== undefined) setValue("dia_semana_pagamento", d.dia_semana_pagamento);
+      if (d.dias_pagamento_quinzenal) setValue("dias_pagamento_quinzenal", d.dias_pagamento_quinzenal);
+      if (d.observacoes) setValue("observacoes", d.observacoes);
+
+      toast.success("Formulário preenchido. Revise antes de salvar.");
+    } catch {
+      toast.error("Não foi possível extrair os dados. Preencha manualmente.");
+    } finally {
+      setAnalisandoPdf(false);
+      // Limpar o input para permitir re-upload do mesmo arquivo
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
   return (
     <>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Upload de briefing (apenas no modo criação) */}
+        {!modoEdicao && (
+          <Card className="border-zinc-800 bg-zinc-900/80 border-dashed">
+            <CardContent className="flex items-center gap-4 py-4">
+              <FileUp className="h-8 w-8 text-zinc-500 shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-zinc-200">Importar dados do briefing</p>
+                <p className="text-xs text-zinc-500">Faça upload do PDF do briefing para preencher o formulário automaticamente</p>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                className="hidden"
+                onChange={handleUploadBriefing}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="gap-2 text-zinc-400 hover:text-white shrink-0"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={analisandoPdf}
+              >
+                {analisandoPdf ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Analisando...</>
+                ) : (
+                  "Selecionar PDF"
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Seção 1: Informações gerais */}
         <Card className="border-zinc-800 bg-zinc-900">
           <CardHeader>
@@ -323,7 +415,17 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
         {/* Seção 3: Responsáveis internos */}
         <Card className="border-zinc-800 bg-zinc-900">
           <CardHeader><CardTitle className="text-sm font-medium text-zinc-300">Responsáveis internos</CardTitle></CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
+          <CardContent className="grid gap-4 sm:grid-cols-3">
+            <div className="space-y-2">
+              <Label>Head</Label>
+              <Select value={watch("head") || ""} onValueChange={(v) => setValue("head", v === "_none" ? null : v)}>
+                <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200"><SelectValue placeholder="— Nenhum —" /></SelectTrigger>
+                <SelectContent className="border-zinc-800 bg-zinc-950">
+                  <SelectItem value="_none">— Nenhum —</SelectItem>
+                  {HEADS.map((h) => (<SelectItem key={h} value={h}>{h}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2">
               <Label>Gestor de projetos *</Label>
               <Select value={watch("gestor_projetos") || ""} onValueChange={(v) => setValue("gestor_projetos", v ?? "")}>

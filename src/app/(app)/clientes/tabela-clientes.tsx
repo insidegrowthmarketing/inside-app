@@ -284,6 +284,7 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
               <TableHead className="text-zinc-400 whitespace-nowrap">Dia pagamento</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Gestor de projetos</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Gestor de tráfego</TableHead>
+              <TableHead className="text-zinc-400 whitespace-nowrap">Head</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Fuso horário</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Início contrato</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Fim contrato</TableHead>
@@ -391,6 +392,10 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
                       ))}
                     </SelectContent>
                   </Select>
+                </TableCell>
+                {/* Head */}
+                <TableCell className="text-zinc-400 whitespace-nowrap">
+                  {cliente.head || "—"}
                 </TableCell>
                 {/* Fuso horário */}
                 <TableCell className="text-zinc-400 whitespace-nowrap">

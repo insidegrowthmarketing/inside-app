@@ -25,6 +25,7 @@ export type Cliente = {
   motivo_churn: string | null;
   dia_semana_pagamento: number | null;
   dias_pagamento_quinzenal: number[] | null;
+  head: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -145,6 +146,9 @@ export const MOTIVOS_CHURN = [
   "Primarizou",
   "Fechou a empresa",
 ] as const;
+
+/** Heads (responsáveis estratégicos) */
+export const HEADS = ["Caio", "Jean"] as const;
 
 /** Moedas aceitas */
 export const MOEDAS = [

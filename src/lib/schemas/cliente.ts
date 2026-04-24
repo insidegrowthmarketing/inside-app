@@ -24,6 +24,7 @@ export const clienteSchema = z.object({
   pacote: z.enum(["start", "pro", "gbp", "ia"], { message: "Pacote é obrigatório" }),
   data_saida: z.string().nullable().optional(),
   motivo_churn: z.string().nullable().optional(),
+  head: z.string().nullable().optional(),
 });
 
 export type ClienteFormData = z.infer<typeof clienteSchema>;

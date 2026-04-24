@@ -19,6 +19,7 @@ import {
   GESTORES_PROJETOS,
   GESTORES_TRAFEGO,
   PACOTES,
+  HEADS,
 } from "@/types/cliente";
 
 interface ClientesFiltersProps {
@@ -29,6 +30,7 @@ interface ClientesFiltersProps {
     gestor_trafego: string;
     pacote: string;
     pais: string;
+    head: string;
     busca: string;
   };
 }
@@ -68,6 +70,7 @@ export function ClientesFilters({ filtros }: ClientesFiltersProps) {
     filtros.gestor_trafego !== "todos" ||
     filtros.pacote !== "todos" ||
     filtros.pais !== "todos" ||
+    filtros.head !== "todos" ||
     filtros.busca !== "";
 
   const triggerCls = "h-9 w-full border-zinc-800 bg-zinc-950 text-zinc-200 text-sm";
@@ -175,6 +178,19 @@ export function ClientesFilters({ filtros }: ClientesFiltersProps) {
               <SelectItem value="todos">Todos</SelectItem>
               <SelectItem value="brasil">Brasil</SelectItem>
               <SelectItem value="eua">EUA</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1 min-w-[110px] w-[110px]">
+          <Label className="text-xs text-zinc-400">Head</Label>
+          <Select value={filtros.head} onValueChange={(v) => { if (v) atualizarFiltro("head", v); }}>
+            <SelectTrigger className={triggerCls}><SelectValue placeholder="Todos" /></SelectTrigger>
+            <SelectContent className={contentCls}>
+              <SelectItem value="todos">Todos</SelectItem>
+              {HEADS.map((h) => (
+                <SelectItem key={h} value={h}>{h}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

@@ -17,6 +17,7 @@ interface PageProps {
     gestor_trafego?: string;
     pacote?: string;
     pais?: string;
+    head?: string;
   }>;
 }
 
@@ -53,6 +54,9 @@ export default async function ClientesPage({ searchParams }: PageProps) {
   } else if (params.pais === "eua") {
     query = query.eq("moeda", "USD");
   }
+  if (params.head && params.head !== "todos") {
+    query = query.eq("head", params.head);
+  }
 
   const { data: clientes, error } = await query;
   if (error) console.error("Erro ao buscar clientes:", error);
@@ -64,6 +68,7 @@ export default async function ClientesPage({ searchParams }: PageProps) {
     gestor_trafego: params.gestor_trafego || "todos",
     pacote: params.pacote || "todos",
     pais: params.pais || "todos",
+    head: params.head || "todos",
     busca: params.busca || "",
   };
 
