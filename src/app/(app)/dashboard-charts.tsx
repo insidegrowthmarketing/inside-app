@@ -12,15 +12,27 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatarMoeda } from "@/lib/formatters";
 
 /** Paleta Inside para gráficos */
 const CORES_INSIDE = ["#E550A5", "#2D7CDB", "#D62087", "#1D5AA5", "#7B3FC9", "#F6F6F7"];
+
+interface SquadData {
+  id: string;
+  nome: string;
+  head: string | null;
+  cor: string;
+  totalClientes: number;
+  mrrBRL: number;
+  mrrUSD: number;
+}
 
 interface DashboardChartsProps {
   dadosStatus: { name: string; value: number; fill: string }[];
   dadosPacote: { name: string; value: number }[];
   dadosGestorTrafego: { name: string; value: number }[];
   dadosGestorProjetos: { name: string; value: number }[];
+  dadosSquads: SquadData[];
 }
 
 const tooltipStyle = {
@@ -35,6 +47,7 @@ export function DashboardCharts({
   dadosPacote,
   dadosGestorTrafego,
   dadosGestorProjetos,
+  dadosSquads,
 }: DashboardChartsProps) {
   const temDados = dadosStatus.length > 0 || dadosPacote.length > 0;
 
@@ -49,6 +62,13 @@ export function DashboardCharts({
     "Ongoing": "#E550A5",
     "Aviso prévio": "#eab308",
   };
+
+  // Dados do donut de squads
+  const donutSquads = dadosSquads.map((s) => ({
+    name: s.nome,
+    value: s.totalClientes,
+    fill: s.cor,
+  }));
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -116,6 +136,70 @@ export function DashboardCharts({
                 <Tooltip contentStyle={tooltipStyle} />
               </PieChart>
             </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Clientes por Squad */}
+      <Card className="border-zinc-800 bg-zinc-900">
+        <CardHeader>
+          <CardTitle className="text-sm font-medium text-zinc-400">
+            Clientes por Squad
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {donutSquads.length === 0 ? (
+            <p className="py-8 text-center text-sm text-zinc-500">Sem dados</p>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={180}>
+                <PieChart>
+                  <Pie
+                    data={donutSquads}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={45}
+                    outerRadius={75}
+                    dataKey="value"
+                    labelLine={false}
+                  >
+                    {donutSquads.map((entry, i) => (
+                      <Cell key={i} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={tooltipStyle} />
+                </PieChart>
+              </ResponsiveContainer>
+
+              {/* Legenda enriquecida */}
+              <div className="mt-4 space-y-3">
+                {dadosSquads.map((s) => (
+                  <div key={s.id} className="flex items-start gap-3">
+                    <div
+                      className="mt-1.5 h-3 w-3 rounded-full shrink-0"
+                      style={{ backgroundColor: s.cor }}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm text-zinc-200 font-medium">
+                        {s.nome}
+                        {s.head && (
+                          <span className="text-zinc-500 font-normal"> ({s.head})</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-zinc-400">
+                        {s.totalClientes} cliente{s.totalClientes !== 1 ? "s" : ""}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        {s.mrrBRL > 0 && `MRR: ${formatarMoeda(s.mrrBRL, "BRL")}`}
+                        {s.mrrBRL > 0 && s.mrrUSD > 0 && " + "}
+                        {s.mrrUSD > 0 && `${s.mrrBRL > 0 ? "" : "MRR: "}${formatarMoeda(s.mrrUSD, "USD")}`}
+                        {s.mrrBRL === 0 && s.mrrUSD === 0 && "MRR: —"}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

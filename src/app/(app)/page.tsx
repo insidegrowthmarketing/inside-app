@@ -16,6 +16,7 @@ import { formatarMoeda, formatarData } from "@/lib/formatters";
 import { PACOTES, STATUS_ATIVOS } from "@/types/cliente";
 import type { Cliente } from "@/types/cliente";
 import { DashboardCharts } from "./dashboard-charts";
+import { SQUADS, getSquadFromHead } from "@/lib/squads";
 
 function getLabelPacote(value: string | null) {
   if (!value) return "—";
@@ -101,6 +102,28 @@ export default async function DashboardPage() {
       gestorProjetosMap[c.gestor_projetos] = (gestorProjetosMap[c.gestor_projetos] || 0) + 1;
     }
   }
+
+  // Distribuição por squad
+  const squadMap: Record<string, { totalClientes: number; mrrBRL: number; mrrUSD: number }> = {};
+  for (const c of clientes) {
+    const squadId = getSquadFromHead(c.head);
+    if (!squadMap[squadId]) squadMap[squadId] = { totalClientes: 0, mrrBRL: 0, mrrUSD: 0 };
+    squadMap[squadId].totalClientes++;
+    const fee = Number(c.fee_mensal);
+    if ((c.moeda || "BRL") === "BRL") squadMap[squadId].mrrBRL += fee;
+    else squadMap[squadId].mrrUSD += fee;
+  }
+
+  const dadosSquads = Object.entries(squadMap).map(([id, dados]) => {
+    const squad = id === "high_impact" ? SQUADS.high_impact : id === "genesis" ? SQUADS.genesis : null;
+    return {
+      id,
+      nome: squad?.nome ?? "Sem squad",
+      head: squad?.head ?? null,
+      cor: squad?.cor ?? "#52525b",
+      ...dados,
+    };
+  });
 
   const statusLabels: Record<string, string> = {
     a_iniciar: "A iniciar",
@@ -237,6 +260,7 @@ export default async function DashboardPage() {
           dadosPacote={dadosPacote}
           dadosGestorTrafego={dadosGestorTrafego}
           dadosGestorProjetos={dadosGestorProjetos}
+          dadosSquads={dadosSquads}
         />
 
         {/* Listas */}
