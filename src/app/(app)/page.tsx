@@ -48,15 +48,17 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const { data: todosClientes } = await query;
   const todos = (todosClientes ?? []) as Cliente[];
 
-  // Filtrar clientes ativos na data de corte
+  // Filtrar clientes visíveis (tudo exceto churn — para listagem e gráficos)
   const clientes = todos.filter((c) => {
     if (isHistorico) {
-      // Na data de corte, estava ativo? (não tinha feito churn ainda OU fez churn depois)
       if (c.status === "churn" && c.data_saida && c.data_saida <= dataCorte) return false;
       return true;
     }
     return c.status !== "churn";
   });
+
+  // Clientes ativos para métricas (exclui churn E pausado)
+  const clientesAtivosMetricas = clientes.filter((c) => c.status !== "pausado");
 
   // Buscar churns do mês da data de corte
   const dcDate = new Date(dataCorte + "T00:00:00");
@@ -70,10 +72,11 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     .gte("data_saida", inicioMesCorte)
     .lte("data_saida", dataCorte);
 
-  // Métricas
-  const todosAtivos = clientes;
+  // Métricas (apenas clientes ativos — exclui pausado e churn)
+  const todosAtivos = clientesAtivosMetricas;
   const onboarding = clientes.filter((c) => c.status === "onboarding");
   const avisoPrevio = clientes.filter((c) => c.status === "aviso_previo");
+  const pausados = clientes.filter((c) => c.status === "pausado");
 
   const mrrBRL = todosAtivos
     .filter((c) => (c.moeda || "BRL") === "BRL")
@@ -106,9 +109,13 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const gestorTrafegoMap: Record<string, number> = {};
   const gestorProjetosMap: Record<string, number> = {};
 
+  // Status mostra todos (incluindo pausado) para visibilidade
   for (const c of clientes) {
     statusMap[c.status] = (statusMap[c.status] || 0) + 1;
+  }
 
+  // Pacote, gestores e squads: apenas clientes ativos (sem pausado)
+  for (const c of clientesAtivosMetricas) {
     if (c.pacote) {
       const label = getLabelPacote(c.pacote);
       pacoteMap[label] = (pacoteMap[label] || 0) + 1;
@@ -123,9 +130,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     }
   }
 
-  // Distribuição por squad
+  // Distribuição por squad (apenas ativos)
   const squadMap: Record<string, { totalClientes: number; mrrBRL: number; mrrUSD: number; avisoPrevioCount: number }> = {};
-  for (const c of clientes) {
+  for (const c of clientesAtivosMetricas) {
     const squadId = getSquadFromHead(c.head);
     if (!squadMap[squadId]) squadMap[squadId] = { totalClientes: 0, mrrBRL: 0, mrrUSD: 0, avisoPrevioCount: 0 };
     squadMap[squadId].totalClientes++;
@@ -150,6 +157,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     onboarding: "Onboarding",
     ongoing: "Ongoing",
     aviso_previo: "Aviso prévio",
+    pausado: "Pausado",
   };
 
   const dadosStatus = Object.entries(statusMap).map(([key, val]) => ({

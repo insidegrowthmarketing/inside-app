@@ -40,7 +40,6 @@ export async function gerarFaturasDoCliente(
 
   const c = cliente as Cliente;
 
-  // Stripe/ASAAS/onboarding: nunca gerar faturas automaticamente
   if (!clienteGeraFaturasAutomaticamente(c)) return { count: 0 };
 
   const frequencia = getFrequenciaDaFormaPagamento(c.forma_pagamento);
@@ -99,7 +98,7 @@ export async function autoCurarFaturas() {
 
   const { data: clientes } = await supabase
     .from("clientes")
-    .select("id, forma_pagamento, status")
+    .select("id, nome, forma_pagamento, status")
     .in("status", [...STATUS_ATIVOS]);
 
   if (!clientes || clientes.length === 0) return { count: 0 };
@@ -112,7 +111,6 @@ export async function autoCurarFaturas() {
   let totalGeradas = 0;
 
   for (const c of clientes) {
-    // Pular Stripe/ASAAS/onboarding — nunca gerar faturas automaticamente
     if (!clienteGeraFaturasAutomaticamente(c)) continue;
     if (!getFrequenciaDaFormaPagamento(c.forma_pagamento)) continue;
 
@@ -120,7 +118,7 @@ export async function autoCurarFaturas() {
       .from("faturas")
       .select("id")
       .eq("cliente_id", c.id)
-      .eq("status", "pendente")
+      .in("status", ["pendente", "paga"])
       .gte("data_vencimento", hojeStr)
       .lte("data_vencimento", em30diasStr)
       .limit(1);

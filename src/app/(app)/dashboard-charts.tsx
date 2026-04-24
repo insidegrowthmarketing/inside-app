@@ -30,6 +30,7 @@ const STATUS_CORES: Record<string, string> = {
   "Onboarding": "#7C3AED",
   "Ongoing": "#8B5CF6",
   "Aviso prévio": "#C4B5FD",
+  "Pausado": "#52525b",
 };
 
 const SQUAD_CORES: Record<string, string> = {

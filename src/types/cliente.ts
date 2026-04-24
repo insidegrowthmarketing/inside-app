@@ -7,7 +7,7 @@ export type Cliente = {
   id: string;
   nome: string;
   fuso_horario: string | null;
-  status: "a_iniciar" | "onboarding" | "ongoing" | "aviso_previo" | "churn";
+  status: "a_iniciar" | "onboarding" | "ongoing" | "aviso_previo" | "churn" | "pausado";
   fee_mensal: number;
   forma_pagamento: string | null;
   inicio_contrato: string | null;
@@ -47,6 +47,7 @@ export const STATUS_CLIENTE = [
   { value: "ongoing", label: "Ongoing", cor: "green" },
   { value: "aviso_previo", label: "Aviso prévio", cor: "yellow" },
   { value: "churn", label: "Churn", cor: "red" },
+  { value: "pausado", label: "Pausado", cor: "zinc" },
 ] as const;
 
 /** Gestores de projetos da agência */

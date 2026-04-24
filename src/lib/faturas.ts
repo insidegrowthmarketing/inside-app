@@ -6,9 +6,16 @@ export function clienteGeraFaturasAutomaticamente(cliente: {
   status?: string;
 }): boolean {
   const forma = (cliente.forma_pagamento ?? "").toLowerCase();
+
+  // Forma de pagamento com integração externa futura — não gera manualmente
   if (forma.startsWith("stripe")) return false;
   if (forma === "asaas") return false;
-  if (cliente.status === "onboarding") return false;
+
+  // Status que não devem gerar faturas
+  if (cliente.status === "pausado") return false;
+  if (cliente.status === "churn") return false;
+
+  // Todos os demais (a_iniciar, onboarding, ongoing, aviso_previo) com Zelle/BOFA geram
   return true;
 }
 

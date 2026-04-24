@@ -3,7 +3,7 @@ import { z } from "zod";
 /** Schema de validação para o formulário de cliente */
 export const clienteSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
-  status: z.enum(["a_iniciar", "onboarding", "ongoing", "aviso_previo", "churn"], {
+  status: z.enum(["a_iniciar", "onboarding", "ongoing", "aviso_previo", "churn", "pausado"], {
     message: "Status é obrigatório",
   }),
   fuso_horario: z.string(),
