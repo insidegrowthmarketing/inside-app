@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { toast } from "sonner";
 import {
   LayoutDashboard,
   Users,
@@ -19,6 +18,7 @@ import {
   Receipt,
   LogOut,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Tooltip,
@@ -56,8 +56,14 @@ const ativoClasses =
 const inativoClasses =
   "border-l-2 border-transparent text-zinc-400 hover:bg-zinc-900/60 hover:text-white";
 
-export function Sidebar() {
+interface SidebarProps {
+  nomeUsuario: string;
+  emailUsuario: string;
+}
+
+export function Sidebar({ nomeUsuario, emailUsuario }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const isClientesAtivo = pathname.startsWith("/clientes");
   const isFinanceiroAtivo = pathname.startsWith("/financeiro");
   const [clientesAberto, setClientesAberto] = useState(isClientesAtivo);
@@ -267,22 +273,26 @@ export function Sidebar() {
                   "linear-gradient(135deg, #2D7CDB 0%, #E550A5 100%)",
               }}
             >
-              J
+              {nomeUsuario.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col min-w-0">
-            <span className="text-sm font-medium text-white">Jéssica</span>
+            <span className="text-sm font-medium text-white">{nomeUsuario}</span>
             <span className="text-[11px] text-zinc-500 truncate">
-              contato@insidetrafegopago.com
+              {emailUsuario}
             </span>
           </div>
         </div>
 
         <button
-          onClick={() =>
-            toast.info("Funcionalidade de login em desenvolvimento")
-          }
-          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-500 hover:text-white hover:bg-zinc-900/50 transition-colors duration-200 cursor-not-allowed opacity-60"
+          onClick={async () => {
+            const { createClient } = await import("@/lib/supabase/client");
+            const supabase = createClient();
+            await supabase.auth.signOut();
+            router.push("/login");
+            router.refresh();
+          }}
+          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-500 hover:text-white hover:bg-zinc-900/50 transition-colors duration-200"
         >
           <LogOut className="h-4 w-4" />
           Sair
