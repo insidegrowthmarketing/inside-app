@@ -75,6 +75,7 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
           data_pagamento: cliente.data_pagamento,
           dia_semana_pagamento: cliente.dia_semana_pagamento,
           dias_pagamento_quinzenal: cliente.dias_pagamento_quinzenal,
+          data_inicio_quinzenal: cliente.data_inicio_quinzenal || null,
           gestor_projetos: cliente.gestor_projetos || "",
           gestor_trafego: cliente.gestor_trafego || "",
           responsavel_financeiro: cliente.responsavel_financeiro || "",
@@ -97,6 +98,7 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
           data_pagamento: null,
           dia_semana_pagamento: null,
           dias_pagamento_quinzenal: null,
+          data_inicio_quinzenal: null,
           head: null,
         },
   });
@@ -130,12 +132,18 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
     if (frequencia === "mensal") {
       setValue("dia_semana_pagamento", null);
       setValue("dias_pagamento_quinzenal", null);
+      setValue("data_inicio_quinzenal", null);
     } else if (frequencia === "semanal") {
       setValue("data_pagamento", null);
       setValue("dias_pagamento_quinzenal", null);
+      setValue("data_inicio_quinzenal", null);
     } else if (frequencia === "quinzenal") {
       setValue("data_pagamento", null);
       setValue("dia_semana_pagamento", null);
+      // Auto-preencher data_inicio_quinzenal com inicio_contrato
+      if (inicioContrato && !watch("data_inicio_quinzenal")) {
+        setValue("data_inicio_quinzenal", inicioContrato);
+      }
     }
   }, [frequencia, setValue]);
 
@@ -381,12 +389,9 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
             {frequencia === "quinzenal" && (
               <>
                 <div className="space-y-2">
-                  <Label>1o dia do mês</Label>
-                  <Input type="number" min="1" max="31" placeholder="Ex: 1" className="border-zinc-800 bg-zinc-950 text-zinc-200" value={quinzenal?.[0] ?? ""} onChange={(e) => { const v = e.target.value ? Number(e.target.value) : 1; setValue("dias_pagamento_quinzenal", [v, quinzenal?.[1] ?? 15]); }} />
-                </div>
-                <div className="space-y-2">
-                  <Label>2o dia do mês</Label>
-                  <Input type="number" min="1" max="31" placeholder="Ex: 15" className="border-zinc-800 bg-zinc-950 text-zinc-200" value={quinzenal?.[1] ?? ""} onChange={(e) => { const v = e.target.value ? Number(e.target.value) : 15; setValue("dias_pagamento_quinzenal", [quinzenal?.[0] ?? 1, v]); }} />
+                  <Label>Data da primeira cobrança</Label>
+                  <Input type="date" className="border-zinc-800 bg-zinc-950 text-zinc-200" {...register("data_inicio_quinzenal")} />
+                  <p className="text-xs text-zinc-500">As próximas cobranças serão geradas a cada 15 dias a partir desta data</p>
                 </div>
               </>
             )}

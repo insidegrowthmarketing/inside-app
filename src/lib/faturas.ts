@@ -98,20 +98,31 @@ export function gerarDatasFaturas(
   }
 
   if (frequencia === "quinzenal") {
-    const dias = cliente.dias_pagamento_quinzenal || [1, 15];
-    // Começar do mês de dataInicio
-    const cursor = new Date(dataInicio.getFullYear(), dataInicio.getMonth(), 1);
-    // Iterar mês a mês e gerar 2 faturas por mês
-    while (cursor <= dataFim) {
-      for (const dia of dias) {
-        const d = new Date(cursor.getFullYear(), cursor.getMonth(), dia);
-        if (d >= dataInicio && d <= dataFim) {
-          datas.push(d);
+    // Novo modelo: a cada 15 dias a partir de data_inicio_quinzenal
+    if (cliente.data_inicio_quinzenal) {
+      const cursor = new Date(cliente.data_inicio_quinzenal + "T00:00:00");
+      while (cursor <= dataFim) {
+        if (cursor >= dataInicio) {
+          datas.push(new Date(cursor));
         }
+        cursor.setDate(cursor.getDate() + 15);
       }
-      cursor.setMonth(cursor.getMonth() + 1);
     }
-    datas.sort((a, b) => a.getTime() - b.getTime());
+    // Modelo antigo: 2 dias fixos por mês
+    else if (cliente.dias_pagamento_quinzenal && cliente.dias_pagamento_quinzenal.length === 2) {
+      const dias = cliente.dias_pagamento_quinzenal;
+      const cursor = new Date(dataInicio.getFullYear(), dataInicio.getMonth(), 1);
+      while (cursor <= dataFim) {
+        for (const dia of dias) {
+          const d = new Date(cursor.getFullYear(), cursor.getMonth(), dia);
+          if (d >= dataInicio && d <= dataFim) {
+            datas.push(d);
+          }
+        }
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
+      datas.sort((a, b) => a.getTime() - b.getTime());
+    }
   }
 
   return datas;

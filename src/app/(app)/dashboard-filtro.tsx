@@ -2,8 +2,10 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useTransition } from "react";
+import { X } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -11,9 +13,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { GESTORES_PROJETOS, GESTORES_TRAFEGO } from "@/types/cliente";
 
 interface DashboardFiltroProps {
-  dataCorteAtual: string;
+  filtros: {
+    dataCorte: string;
+    gestor_projetos: string;
+    gestor_trafego: string;
+    squad: string;
+  };
 }
 
 function calcularData(opcao: string): string {
@@ -42,81 +50,137 @@ function calcularData(opcao: string): string {
   }
 }
 
-export function DashboardFiltro({ dataCorteAtual }: DashboardFiltroProps) {
+export function DashboardFiltro({ filtros }: DashboardFiltroProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
 
   const hojeStr = new Date().toISOString().split("T")[0];
-  const isHoje = dataCorteAtual === hojeStr || !dataCorteAtual;
+  const isHoje = filtros.dataCorte === hojeStr || !filtros.dataCorte;
 
-  // Determinar qual preset está selecionado
   function getPreset(): string {
     if (isHoje) return "hoje";
-    const fimMesPassado = calcularData("fim_mes_passado");
-    if (dataCorteAtual === fimMesPassado) return "fim_mes_passado";
-    const fim3 = calcularData("fim_3_meses");
-    if (dataCorteAtual === fim3) return "fim_3_meses";
-    const fim6 = calcularData("fim_6_meses");
-    if (dataCorteAtual === fim6) return "fim_6_meses";
-    const fimAno = calcularData("fim_ano_passado");
-    if (dataCorteAtual === fimAno) return "fim_ano_passado";
+    const dc = filtros.dataCorte;
+    if (dc === calcularData("fim_mes_passado")) return "fim_mes_passado";
+    if (dc === calcularData("fim_3_meses")) return "fim_3_meses";
+    if (dc === calcularData("fim_6_meses")) return "fim_6_meses";
+    if (dc === calcularData("fim_ano_passado")) return "fim_ano_passado";
     return "personalizada";
   }
 
   const presetAtual = getPreset();
 
-  const atualizarData = useCallback(
-    (data: string) => {
+  const atualizarFiltro = useCallback(
+    (chave: string, valor: string) => {
       const params = new URLSearchParams(searchParams.toString());
-      const hojeStr = new Date().toISOString().split("T")[0];
-      if (data === hojeStr) {
-        params.delete("dataCorte");
+      if (!valor || valor === "todos" || (chave === "dataCorte" && valor === hojeStr)) {
+        params.delete(chave);
       } else {
-        params.set("dataCorte", data);
+        params.set(chave, valor);
       }
       startTransition(() => {
         router.push(`/?${params.toString()}`);
       });
     },
-    [router, searchParams, startTransition]
+    [router, searchParams, startTransition, hojeStr]
   );
 
+  const limparFiltros = useCallback(() => {
+    startTransition(() => { router.push("/"); });
+  }, [router, startTransition]);
+
+  const temFiltroAtivo =
+    !isHoje ||
+    filtros.gestor_projetos !== "todos" ||
+    filtros.gestor_trafego !== "todos" ||
+    filtros.squad !== "todos";
+
+  const triggerCls = "h-8 w-full border-zinc-800 bg-zinc-950 text-zinc-200 text-xs";
+  const contentCls = "border-zinc-800 bg-zinc-950";
+
   return (
-    <div className="flex items-center gap-3">
-      <Label className="text-xs text-zinc-500 whitespace-nowrap">Ver métricas até:</Label>
-      <Select
-        value={presetAtual}
-        onValueChange={(v) => {
-          if (!v) return;
-          if (v === "personalizada") return;
-          atualizarData(calcularData(v));
-        }}
-      >
-        <SelectTrigger className="h-8 w-[200px] border-zinc-800 bg-zinc-950 text-zinc-200 text-xs">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent className="border-zinc-800 bg-zinc-950">
-          <SelectItem value="hoje">Hoje</SelectItem>
-          <SelectItem value="fim_mes_passado">Fim do mês passado</SelectItem>
-          <SelectItem value="fim_3_meses">Fim de 3 meses atrás</SelectItem>
-          <SelectItem value="fim_6_meses">Fim de 6 meses atrás</SelectItem>
-          <SelectItem value="fim_ano_passado">Fim do ano passado</SelectItem>
-          <SelectItem value="personalizada">Data personalizada</SelectItem>
-        </SelectContent>
-      </Select>
+    <div className="flex flex-wrap items-end gap-3">
+      {/* Período */}
+      <div className="flex flex-col gap-1 min-w-[190px]">
+        <Label className="text-xs text-zinc-500">Período</Label>
+        <Select
+          value={presetAtual}
+          onValueChange={(v) => {
+            if (!v || v === "personalizada") return;
+            atualizarFiltro("dataCorte", calcularData(v));
+          }}
+        >
+          <SelectTrigger className={triggerCls}><SelectValue /></SelectTrigger>
+          <SelectContent className={contentCls}>
+            <SelectItem value="hoje">Hoje</SelectItem>
+            <SelectItem value="fim_mes_passado">Fim do mês passado</SelectItem>
+            <SelectItem value="fim_3_meses">Fim de 3 meses atrás</SelectItem>
+            <SelectItem value="fim_6_meses">Fim de 6 meses atrás</SelectItem>
+            <SelectItem value="fim_ano_passado">Fim do ano passado</SelectItem>
+            <SelectItem value="personalizada">Data personalizada</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       {presetAtual === "personalizada" && (
-        <Input
-          type="date"
-          className="h-8 w-[160px] border-zinc-800 bg-zinc-950 text-zinc-200 text-xs"
-          value={dataCorteAtual}
-          onChange={(e) => { if (e.target.value) atualizarData(e.target.value); }}
-        />
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-zinc-500">Data</Label>
+          <Input
+            type="date"
+            className="h-8 w-[150px] border-zinc-800 bg-zinc-950 text-zinc-200 text-xs"
+            value={filtros.dataCorte}
+            onChange={(e) => { if (e.target.value) atualizarFiltro("dataCorte", e.target.value); }}
+          />
+        </div>
+      )}
+
+      {/* Gestor de Projetos */}
+      <div className="flex flex-col gap-1 min-w-[170px]">
+        <Label className="text-xs text-zinc-500">Gestor de Projetos</Label>
+        <Select value={filtros.gestor_projetos} onValueChange={(v) => { if (v) atualizarFiltro("gestor_projetos", v); }}>
+          <SelectTrigger className={triggerCls}><SelectValue placeholder="Todos" /></SelectTrigger>
+          <SelectContent className={contentCls}>
+            <SelectItem value="todos">Todos</SelectItem>
+            {GESTORES_PROJETOS.map((g) => (<SelectItem key={g} value={g}>{g}</SelectItem>))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Gestor de Tráfego */}
+      <div className="flex flex-col gap-1 min-w-[170px]">
+        <Label className="text-xs text-zinc-500">Gestor de Tráfego</Label>
+        <Select value={filtros.gestor_trafego} onValueChange={(v) => { if (v) atualizarFiltro("gestor_trafego", v); }}>
+          <SelectTrigger className={triggerCls}><SelectValue placeholder="Todos" /></SelectTrigger>
+          <SelectContent className={contentCls}>
+            <SelectItem value="todos">Todos</SelectItem>
+            {GESTORES_TRAFEGO.map((g) => (<SelectItem key={g} value={g}>{g}</SelectItem>))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Squad */}
+      <div className="flex flex-col gap-1 min-w-[140px]">
+        <Label className="text-xs text-zinc-500">Squad</Label>
+        <Select value={filtros.squad} onValueChange={(v) => { if (v) atualizarFiltro("squad", v); }}>
+          <SelectTrigger className={triggerCls}><SelectValue placeholder="Todos" /></SelectTrigger>
+          <SelectContent className={contentCls}>
+            <SelectItem value="todos">Todos</SelectItem>
+            <SelectItem value="high_impact">High Impact</SelectItem>
+            <SelectItem value="genesis">Genesis</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Limpar */}
+      {temFiltroAtivo && (
+        <Button variant="ghost" size="sm" className="h-8 gap-1 text-zinc-500 hover:text-white text-xs shrink-0" onClick={limparFiltros}>
+          <X className="h-3 w-3" />
+          Limpar
+        </Button>
       )}
 
       {!isHoje && (
-        <span className="text-[10px] text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded">
+        <span className="text-[10px] text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded self-end mb-1">
           Visualização histórica
         </span>
       )}

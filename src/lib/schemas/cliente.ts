@@ -15,6 +15,7 @@ export const clienteSchema = z.object({
   data_pagamento: z.number().int().min(1).max(31).nullable(),
   dia_semana_pagamento: z.number().int().min(0).max(6).nullable(),
   dias_pagamento_quinzenal: z.array(z.number().int().min(1).max(31)).nullable(),
+  data_inicio_quinzenal: z.string().nullable().optional(),
   gestor_projetos: z.string().min(1, "Gestor de projetos é obrigatório"),
   gestor_trafego: z.string().min(1, "Gestor de tráfego é obrigatório"),
   responsavel_financeiro: z.string(),

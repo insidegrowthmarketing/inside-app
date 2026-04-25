@@ -15,6 +15,7 @@ export function formatarDiaPagamento(cliente: {
   data_pagamento: number | null;
   dia_semana_pagamento: number | null;
   dias_pagamento_quinzenal: number[] | null;
+  data_inicio_quinzenal?: string | null;
 }): string {
   const fp = (cliente.forma_pagamento || "").toLowerCase();
 
@@ -22,9 +23,17 @@ export function formatarDiaPagamento(cliente: {
   if (fp.startsWith("stripe")) return "—";
 
   if (fp.includes("quinzenal")) {
+    // Novo modelo
+    if (cliente.data_inicio_quinzenal) {
+      const d = new Date(cliente.data_inicio_quinzenal + "T00:00:00");
+      if (!isNaN(d.getTime())) {
+        return `A cada 15d (${d.toLocaleDateString("pt-BR")})`;
+      }
+    }
+    // Modelo antigo
     const dias = cliente.dias_pagamento_quinzenal;
-    if (!dias || dias.length < 2) return "—";
-    return `Dias ${dias[0]} e ${dias[1]}`;
+    if (dias && dias.length >= 2) return `Dias ${dias[0]} e ${dias[1]}`;
+    return "—";
   }
 
   if (fp.includes("semanal")) {

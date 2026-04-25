@@ -25,7 +25,12 @@ function getLabelPacote(value: string | null) {
 }
 
 interface PageProps {
-  searchParams: Promise<{ dataCorte?: string }>;
+  searchParams: Promise<{
+    dataCorte?: string;
+    gestor_projetos?: string;
+    gestor_trafego?: string;
+    squad?: string;
+  }>;
 }
 
 export default async function DashboardPage({ searchParams }: PageProps) {
@@ -37,12 +42,27 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const dataCorte = params.dataCorte || hojeStr;
   const isHistorico = dataCorte !== hojeStr;
 
+  // Filtros de gestor/squad
+  const gpFiltro = params.gestor_projetos || "todos";
+  const gtFiltro = params.gestor_trafego || "todos";
+  const squadFiltro = params.squad || "todos";
+
   // Buscar TODOS os clientes (incluindo churn) para filtrar por data de corte
   let query = supabase.from("clientes").select("*").order("created_at", { ascending: false });
 
   if (isHistorico) {
-    // Clientes que existiam na data de corte: criados antes da data
     query = query.lte("created_at", dataCorte + "T23:59:59");
+  }
+  if (gpFiltro !== "todos") {
+    query = query.eq("gestor_projetos", gpFiltro);
+  }
+  if (gtFiltro !== "todos") {
+    query = query.eq("gestor_trafego", gtFiltro);
+  }
+  if (squadFiltro === "high_impact") {
+    query = query.eq("head", "Caio");
+  } else if (squadFiltro === "genesis") {
+    query = query.eq("head", "Jean");
   }
 
   const { data: todosClientes } = await query;
@@ -65,12 +85,17 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const inicioMesCorte = new Date(dcDate.getFullYear(), dcDate.getMonth(), 1)
     .toISOString().split("T")[0];
 
-  const { data: churnsDoMes } = await supabase
+  let churnQuery = supabase
     .from("clientes")
     .select("id")
     .eq("status", "churn")
     .gte("data_saida", inicioMesCorte)
     .lte("data_saida", dataCorte);
+  if (gpFiltro !== "todos") churnQuery = churnQuery.eq("gestor_projetos", gpFiltro);
+  if (gtFiltro !== "todos") churnQuery = churnQuery.eq("gestor_trafego", gtFiltro);
+  if (squadFiltro === "high_impact") churnQuery = churnQuery.eq("head", "Caio");
+  else if (squadFiltro === "genesis") churnQuery = churnQuery.eq("head", "Jean");
+  const { data: churnsDoMes } = await churnQuery;
 
   // Métricas (apenas clientes ativos — exclui pausado e churn)
   const todosAtivos = clientesAtivosMetricas;
@@ -197,8 +222,13 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         <PageHeader titulo="Dashboard" subtitulo="Visão geral da Inside" />
       </div>
 
-      {/* Filtro de período */}
-      <DashboardFiltro dataCorteAtual={dataCorte} />
+      {/* Filtros */}
+      <DashboardFiltro filtros={{
+        dataCorte,
+        gestor_projetos: gpFiltro,
+        gestor_trafego: gtFiltro,
+        squad: squadFiltro,
+      }} />
 
       {/* Cards numéricos */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
