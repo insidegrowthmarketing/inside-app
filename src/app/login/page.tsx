@@ -23,9 +23,14 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") || "/";
 
+  const errorParam = searchParams.get("error");
+
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [erro, setErro] = useState("");
+  const [erro, setErro] = useState(
+    errorParam === "link_expirado" ? "O link expirou. Solicite um novo convite ou use \"Esqueci minha senha\"." :
+    errorParam === "auth_callback_failed" ? "Falha na autenticação. Tente novamente." : ""
+  );
   const [carregando, setCarregando] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
