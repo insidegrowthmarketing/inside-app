@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -18,7 +18,7 @@ function traduzirErro(msg: string): string {
   return "Erro ao entrar. Tente novamente.";
 }
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") || "/";
@@ -51,7 +51,6 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4">
-      {/* Gradiente de fundo sutil */}
       <div
         className="pointer-events-none fixed inset-0 opacity-30"
         style={{
@@ -62,7 +61,6 @@ export default function LoginPage() {
 
       <Card className="relative z-10 w-full max-w-sm border-zinc-800/60 bg-zinc-900/80 backdrop-blur-sm rounded-2xl">
         <CardContent className="p-8">
-          {/* Logo */}
           <div className="flex justify-center mb-8">
             <Image
               src="/Logo_INSIDE-02.svg"
@@ -74,7 +72,6 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* Título */}
           <h1
             className="text-2xl font-bold text-center mb-1 bg-clip-text text-transparent"
             style={{
@@ -88,7 +85,6 @@ export default function LoginPage() {
             Painel de gestão da agência
           </p>
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-zinc-300">Email</Label>
@@ -122,11 +118,7 @@ export default function LoginPage() {
               </p>
             )}
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={carregando}
-            >
+            <Button type="submit" className="w-full" disabled={carregando}>
               {carregando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Entrar
             </Button>
@@ -143,5 +135,19 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-zinc-950">
+          <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
