@@ -12,8 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatarMoeda, formatarData, formatarDiaPagamento } from "@/lib/formatters";
-import { Badge } from "@/components/ui/badge";
+import { formatarMoeda, formatarData } from "@/lib/formatters";
 import { PACOTES } from "@/types/cliente";
 import type { Cliente } from "@/types/cliente";
 import { LtvFilters } from "./ltv-filters";
@@ -52,7 +51,7 @@ export default async function LtvPage({ searchParams }: PageProps) {
     .select("*")
     .eq("status", "churn")
     .not("data_saida", "is", null)
-    .order("inicio_contrato", { ascending: true, nullsFirst: false });
+    .order("data_saida", { ascending: true, nullsFirst: false });
 
   if (params.busca) {
     query = query.ilike("nome", `%${params.busca}%`);
@@ -169,7 +168,6 @@ export default async function LtvPage({ searchParams }: PageProps) {
                   <TableHead className="text-zinc-400 whitespace-nowrap">Pacote</TableHead>
                   <TableHead className="text-zinc-400 whitespace-nowrap">Gestor de projetos</TableHead>
                   <TableHead className="text-zinc-400 whitespace-nowrap">Gestor de tráfego</TableHead>
-                  <TableHead className="text-zinc-400 whitespace-nowrap">Dia pagamento</TableHead>
                   <TableHead className="text-zinc-400 whitespace-nowrap">Moeda</TableHead>
                   <TableHead className="text-zinc-400 whitespace-nowrap">Fee mensal</TableHead>
                   <TableHead className="text-zinc-400 whitespace-nowrap">Início contrato</TableHead>
@@ -177,7 +175,6 @@ export default async function LtvPage({ searchParams }: PageProps) {
                   <TableHead className="text-zinc-400 whitespace-nowrap">Meses ativo</TableHead>
                   <TableHead className="text-zinc-400 whitespace-nowrap">LTV total</TableHead>
                   <TableHead className="text-zinc-400 whitespace-nowrap">Motivo do churn</TableHead>
-                  <TableHead className="text-zinc-400 whitespace-nowrap">GHL</TableHead>
                   <TableHead className="text-zinc-400 whitespace-nowrap text-right">Ação</TableHead>
                 </TableRow>
               </TableHeader>
@@ -202,9 +199,6 @@ export default async function LtvPage({ searchParams }: PageProps) {
                       <TableCell className="text-zinc-400 whitespace-nowrap">
                         {cliente.gestor_trafego || "—"}
                       </TableCell>
-                      <TableCell className="text-zinc-400 whitespace-nowrap text-xs">
-                        {formatarDiaPagamento(cliente)}
-                      </TableCell>
                       <TableCell className="text-zinc-400 whitespace-nowrap">
                         {simboloMoeda}
                       </TableCell>
@@ -225,12 +219,6 @@ export default async function LtvPage({ searchParams }: PageProps) {
                       </TableCell>
                       <TableCell className="text-zinc-400 max-w-[200px] truncate">
                         {cliente.motivo_churn || "—"}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {cliente.contempla_ghl
-                          ? <Badge className="border-0 text-xs bg-green-500/20 text-green-400">Sim</Badge>
-                          : <Badge className="border-0 text-xs bg-zinc-800 text-zinc-500">Não</Badge>
-                        }
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
                         <LtvAcoes clienteId={cliente.id} clienteNome={cliente.nome} />

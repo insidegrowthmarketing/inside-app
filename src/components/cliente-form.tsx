@@ -417,6 +417,38 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
           </CardContent>
         </Card>
 
+        {/* Seção condicional: Saída (churn ou aviso prévio) */}
+        {(watch("status") === "churn" || watch("status") === "aviso_previo") && (
+          <Card className="border-zinc-800 bg-zinc-900">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-zinc-300">Saída</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="data_saida_edit">Data de saída</Label>
+                <Input
+                  id="data_saida_edit"
+                  type="date"
+                  className="border-zinc-800 bg-zinc-950 text-zinc-200"
+                  value={watch("data_saida") || ""}
+                  onChange={(e) => setValue("data_saida", e.target.value || null)}
+                />
+                <p className="text-xs text-zinc-500">Data efetiva de saída do cliente. Edite se precisar corrigir o histórico.</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Motivo do churn</Label>
+                <Select value={watch("motivo_churn") || ""} onValueChange={(v) => setValue("motivo_churn", v === "_none" ? null : v)}>
+                  <SelectTrigger className="border-zinc-800 bg-zinc-950 text-zinc-200"><SelectValue placeholder="— Selecione —" /></SelectTrigger>
+                  <SelectContent className="border-zinc-800 bg-zinc-950">
+                    <SelectItem value="_none">— Nenhum —</SelectItem>
+                    {MOTIVOS_CHURN.map((m) => (<SelectItem key={m} value={m}>{m}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Seção 3: Responsáveis internos */}
         <Card className="border-zinc-800 bg-zinc-900">
           <CardHeader><CardTitle className="text-sm font-medium text-zinc-300">Responsáveis internos</CardTitle></CardHeader>

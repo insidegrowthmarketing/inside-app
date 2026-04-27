@@ -76,10 +76,16 @@ export async function atualizarCliente(id: string, formData: unknown) {
     faturasGeradas = resultado.count;
   }
 
+  // Se churn com data_saida, cancelar faturas pendentes após a data de saída
+  if (statusAtual === "churn" && parsed.data.data_saida) {
+    await cancelarFaturasFuturas(id, parsed.data.data_saida);
+  }
+
   revalidatePath("/clientes");
   revalidatePath("/clientes/ltv");
   revalidatePath(`/clientes/${id}`);
   revalidatePath("/financeiro");
+  revalidatePath("/financeiro/cobrancas");
   redirect(`/clientes/${id}`);
 }
 
