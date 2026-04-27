@@ -72,6 +72,7 @@ export const GESTORES_TRAFEGO = [
   "Samara",
   "Gabriel",
   "Eliane",
+  "Mirella",
 ] as const;
 
 /** Formas de pagamento aceitas */
