@@ -41,12 +41,16 @@ const menuFuturo = [
 ];
 
 /** Subitens */
+const subMenuDashboards = [
+  { href: "/dashboards/clientes", label: "Clientes", icon: Users },
+  { href: "/dashboards/ltv", label: "LTV", icon: History },
+  { href: "/dashboards/financeiro", label: "Financeiro", icon: DollarSign },
+];
 const subMenuClientes = [
   { href: "/clientes", label: "Base de Clientes", icon: BookUser },
   { href: "/clientes/ltv", label: "LTV", icon: History },
 ];
 const subMenuFinanceiro = [
-  { href: "/financeiro", label: "Dashboard", icon: BarChart3 },
   { href: "/financeiro/cobrancas", label: "Cobranças", icon: Receipt },
 ];
 
@@ -64,8 +68,10 @@ interface SidebarProps {
 export function Sidebar({ nomeUsuario, emailUsuario }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const isDashboardsAtivo = pathname.startsWith("/dashboards") || pathname === "/";
   const isClientesAtivo = pathname.startsWith("/clientes");
   const isFinanceiroAtivo = pathname.startsWith("/financeiro");
+  const [dashboardsAberto, setDashboardsAberto] = useState(isDashboardsAtivo);
   const [clientesAberto, setClientesAberto] = useState(isClientesAtivo);
   const [financeiroAberto, setFinanceiroAberto] = useState(isFinanceiroAtivo);
 
@@ -155,55 +161,24 @@ export function Sidebar({ nomeUsuario, emailUsuario }: SidebarProps) {
 
         <div className="space-y-1">
           <TooltipProvider delay={0}>
-            {/* Dashboard */}
-            <Link href="/">
-              <div
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer",
-                  pathname === "/" ? ativoClasses : inativoClasses
-                )}
-              >
-                <LayoutDashboard
-                  className={cn(
-                    "h-4 w-4",
-                    pathname === "/" ? "text-[#E550A5]" : "text-zinc-500"
-                  )}
-                />
-                Dashboard
-                <ChevronRight
-                  className={cn(
-                    "ml-auto h-3.5 w-3.5",
-                    pathname === "/" ? "text-[#E550A5]" : "text-zinc-600"
-                  )}
-                />
-              </div>
-            </Link>
+            {/* Dashboards */}
+            <Collapsible open={dashboardsAberto} onOpenChange={setDashboardsAberto}>
+              <CollapsibleTrigger className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer", isDashboardsAtivo ? ativoClasses : inativoClasses)}>
+                <LayoutDashboard className={cn("h-4 w-4", isDashboardsAtivo ? "text-[#E550A5]" : "text-zinc-500")} />
+                Dashboards
+                <ChevronRight className={cn("ml-auto h-3.5 w-3.5 transition-transform duration-200", dashboardsAberto && "rotate-90", isDashboardsAtivo ? "text-[#E550A5]" : "text-zinc-600")} />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                {renderSubItems(subMenuDashboards, "/dashboards")}
+              </CollapsibleContent>
+            </Collapsible>
 
             {/* Clientes */}
-            <Collapsible
-              open={clientesAberto}
-              onOpenChange={setClientesAberto}
-            >
-              <CollapsibleTrigger
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer",
-                  isClientesAtivo ? ativoClasses : inativoClasses
-                )}
-              >
-                <Users
-                  className={cn(
-                    "h-4 w-4",
-                    isClientesAtivo ? "text-[#E550A5]" : "text-zinc-500"
-                  )}
-                />
+            <Collapsible open={clientesAberto} onOpenChange={setClientesAberto}>
+              <CollapsibleTrigger className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer", isClientesAtivo ? ativoClasses : inativoClasses)}>
+                <BookUser className={cn("h-4 w-4", isClientesAtivo ? "text-[#E550A5]" : "text-zinc-500")} />
                 Clientes
-                <ChevronRight
-                  className={cn(
-                    "ml-auto h-3.5 w-3.5 transition-transform duration-200",
-                    clientesAberto && "rotate-90",
-                    isClientesAtivo ? "text-[#E550A5]" : "text-zinc-600"
-                  )}
-                />
+                <ChevronRight className={cn("ml-auto h-3.5 w-3.5 transition-transform duration-200", clientesAberto && "rotate-90", isClientesAtivo ? "text-[#E550A5]" : "text-zinc-600")} />
               </CollapsibleTrigger>
               <CollapsibleContent>
                 {renderSubItems(subMenuClientes, "/clientes")}
@@ -211,30 +186,11 @@ export function Sidebar({ nomeUsuario, emailUsuario }: SidebarProps) {
             </Collapsible>
 
             {/* Financeiro */}
-            <Collapsible
-              open={financeiroAberto}
-              onOpenChange={setFinanceiroAberto}
-            >
-              <CollapsibleTrigger
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer",
-                  isFinanceiroAtivo ? ativoClasses : inativoClasses
-                )}
-              >
-                <DollarSign
-                  className={cn(
-                    "h-4 w-4",
-                    isFinanceiroAtivo ? "text-[#E550A5]" : "text-zinc-500"
-                  )}
-                />
+            <Collapsible open={financeiroAberto} onOpenChange={setFinanceiroAberto}>
+              <CollapsibleTrigger className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer", isFinanceiroAtivo ? ativoClasses : inativoClasses)}>
+                <Receipt className={cn("h-4 w-4", isFinanceiroAtivo ? "text-[#E550A5]" : "text-zinc-500")} />
                 Financeiro
-                <ChevronRight
-                  className={cn(
-                    "ml-auto h-3.5 w-3.5 transition-transform duration-200",
-                    financeiroAberto && "rotate-90",
-                    isFinanceiroAtivo ? "text-[#E550A5]" : "text-zinc-600"
-                  )}
-                />
+                <ChevronRight className={cn("ml-auto h-3.5 w-3.5 transition-transform duration-200", financeiroAberto && "rotate-90", isFinanceiroAtivo ? "text-[#E550A5]" : "text-zinc-600")} />
               </CollapsibleTrigger>
               <CollapsibleContent>
                 {renderSubItems(subMenuFinanceiro, "/financeiro")}
