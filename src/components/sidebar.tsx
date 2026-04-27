@@ -63,9 +63,10 @@ const inativoClasses =
 interface SidebarProps {
   nomeUsuario: string;
   emailUsuario: string;
+  papelUsuario?: string;
 }
 
-export function Sidebar({ nomeUsuario, emailUsuario }: SidebarProps) {
+export function Sidebar({ nomeUsuario, emailUsuario, papelUsuario }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const isDashboardsAtivo = pathname.startsWith("/dashboards") || pathname === "/";
@@ -235,6 +236,8 @@ export function Sidebar({ nomeUsuario, emailUsuario }: SidebarProps) {
           <div className="flex flex-col min-w-0">
             <span className="text-sm font-medium text-white">{nomeUsuario}</span>
             <span className="text-[11px] text-zinc-500 truncate">
+              {papelUsuario && <span className={papelUsuario === "Admin" ? "text-[#E550A5]" : "text-zinc-500"}>{papelUsuario}</span>}
+              {papelUsuario && " · "}
               {emailUsuario}
             </span>
           </div>

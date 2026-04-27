@@ -64,6 +64,7 @@ import type { Cliente } from "@/types/cliente";
 
 interface TabelaClientesProps {
   clientes: Cliente[];
+  isAdmin: boolean;
 }
 
 type CampoMassa = "status" | "forma_pagamento" | "gestor_projetos" | "gestor_trafego";
@@ -79,7 +80,7 @@ function getLabelStatus(value: string) {
   return STATUS_CLIENTE.find((s) => s.value === value)?.label ?? value;
 }
 
-export function TabelaClientes({ clientes }: TabelaClientesProps) {
+export function TabelaClientes({ clientes, isAdmin }: TabelaClientesProps) {
   const router = useRouter();
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [excluirDialog, setExcluirDialog] = useState<{ id: string; nome: string } | null>(null);
@@ -224,8 +225,8 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
 
   return (
     <>
-      {/* Barra de ação em massa */}
-      {selecionados.size > 0 && (
+      {/* Barra de ação em massa — só admin */}
+      {isAdmin && selecionados.size > 0 && (
         <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 mb-4">
           <span className="text-sm text-zinc-300 font-medium">
             {selecionados.size} cliente{selecionados.size > 1 ? "s" : ""} selecionado{selecionados.size > 1 ? "s" : ""}
@@ -273,9 +274,11 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
         <Table>
           <TableHeader>
             <TableRow className="border-zinc-800 hover:bg-transparent">
-              <TableHead className="w-10 text-zinc-400">
-                <Checkbox checked={todosSelecionados} onCheckedChange={toggleTodos} />
-              </TableHead>
+              {isAdmin && (
+                <TableHead className="w-10 text-zinc-400">
+                  <Checkbox checked={todosSelecionados} onCheckedChange={toggleTodos} />
+                </TableHead>
+              )}
               <TableHead className="text-zinc-400 whitespace-nowrap">Nome</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Status</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Pacote</TableHead>
@@ -299,9 +302,11 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
                 className="border-zinc-800 hover:bg-zinc-800/50"
                 data-selected={selecionados.has(cliente.id) || undefined}
               >
-                <TableCell>
-                  <Checkbox checked={selecionados.has(cliente.id)} onCheckedChange={() => toggleUm(cliente.id)} />
-                </TableCell>
+                {isAdmin && (
+                  <TableCell>
+                    <Checkbox checked={selecionados.has(cliente.id)} onCheckedChange={() => toggleUm(cliente.id)} />
+                  </TableCell>
+                )}
                 <TableCell className="font-medium text-zinc-200 whitespace-nowrap">
                   {cliente.nome}
                 </TableCell>
@@ -321,77 +326,49 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
                     </SelectContent>
                   </Select>
                 </TableCell>
-                {/* Pacote - dropdown inline */}
-                <TableCell>
-                  <Select
-                    value={cliente.pacote || ""}
-                    onValueChange={(v) => { if (v) handlePacoteChange(cliente.id, v); }}
-                  >
-                    <SelectTrigger className="h-8 w-[100px] border-zinc-800 bg-transparent text-xs text-zinc-300">
-                      <SelectValue placeholder="—" />
-                    </SelectTrigger>
-                    <SelectContent className="border-zinc-800 bg-zinc-950">
-                      {PACOTES.map((p) => (
-                        <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                {/* Pacote */}
+                <TableCell className="text-zinc-300 whitespace-nowrap text-xs">
+                  {isAdmin ? (
+                    <Select value={cliente.pacote || ""} onValueChange={(v) => { if (v) handlePacoteChange(cliente.id, v); }}>
+                      <SelectTrigger className="h-8 w-[100px] border-zinc-800 bg-transparent text-xs text-zinc-300"><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectContent className="border-zinc-800 bg-zinc-950">{PACOTES.map((p) => (<SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>))}</SelectContent>
+                    </Select>
+                  ) : (PACOTES.find((p) => p.value === cliente.pacote)?.label || "—")}
                 </TableCell>
-                {/* Fee mensal com moeda */}
+                {/* Fee mensal */}
                 <TableCell className="text-zinc-300 whitespace-nowrap">
                   {formatarMoeda(Number(cliente.fee_mensal), cliente.moeda || "BRL")}
                 </TableCell>
-                {/* Forma de pagamento - dropdown inline */}
-                <TableCell>
-                  <Select
-                    value={cliente.forma_pagamento || ""}
-                    onValueChange={(v) => { if (v) handleInlineChange(cliente.id, "forma_pagamento", v); }}
-                  >
-                    <SelectTrigger className="h-8 w-[180px] border-zinc-800 bg-transparent text-xs text-zinc-300">
-                      <SelectValue placeholder="—" />
-                    </SelectTrigger>
-                    <SelectContent className="border-zinc-800 bg-zinc-950">
-                      {FORMAS_PAGAMENTO.map((f) => (
-                        <SelectItem key={f} value={f}>{f}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                {/* Forma de pagamento */}
+                <TableCell className="text-zinc-300 whitespace-nowrap text-xs">
+                  {isAdmin ? (
+                    <Select value={cliente.forma_pagamento || ""} onValueChange={(v) => { if (v) handleInlineChange(cliente.id, "forma_pagamento", v); }}>
+                      <SelectTrigger className="h-8 w-[180px] border-zinc-800 bg-transparent text-xs text-zinc-300"><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectContent className="border-zinc-800 bg-zinc-950">{FORMAS_PAGAMENTO.map((f) => (<SelectItem key={f} value={f}>{f}</SelectItem>))}</SelectContent>
+                    </Select>
+                  ) : (cliente.forma_pagamento || "—")}
                 </TableCell>
                 {/* Dia pagamento */}
                 <TableCell className="text-zinc-400 whitespace-nowrap text-xs">
                   {formatarDiaPagamento(cliente)}
                 </TableCell>
-                {/* Gestor de projetos - dropdown inline */}
-                <TableCell>
-                  <Select
-                    value={cliente.gestor_projetos || ""}
-                    onValueChange={(v) => { if (v) handleInlineChange(cliente.id, "gestor_projetos", v); }}
-                  >
-                    <SelectTrigger className="h-8 w-[140px] border-zinc-800 bg-transparent text-xs text-zinc-300">
-                      <SelectValue placeholder="—" />
-                    </SelectTrigger>
-                    <SelectContent className="border-zinc-800 bg-zinc-950">
-                      {GESTORES_PROJETOS.map((g) => (
-                        <SelectItem key={g} value={g}>{g}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                {/* Gestor de projetos */}
+                <TableCell className="text-zinc-400 whitespace-nowrap text-xs">
+                  {isAdmin ? (
+                    <Select value={cliente.gestor_projetos || ""} onValueChange={(v) => { if (v) handleInlineChange(cliente.id, "gestor_projetos", v); }}>
+                      <SelectTrigger className="h-8 w-[140px] border-zinc-800 bg-transparent text-xs text-zinc-300"><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectContent className="border-zinc-800 bg-zinc-950">{GESTORES_PROJETOS.map((g) => (<SelectItem key={g} value={g}>{g}</SelectItem>))}</SelectContent>
+                    </Select>
+                  ) : (cliente.gestor_projetos || "—")}
                 </TableCell>
-                {/* Gestor de tráfego - dropdown inline */}
-                <TableCell>
-                  <Select
-                    value={cliente.gestor_trafego || ""}
-                    onValueChange={(v) => { if (v) handleInlineChange(cliente.id, "gestor_trafego", v); }}
-                  >
-                    <SelectTrigger className="h-8 w-[140px] border-zinc-800 bg-transparent text-xs text-zinc-300">
-                      <SelectValue placeholder="—" />
-                    </SelectTrigger>
-                    <SelectContent className="border-zinc-800 bg-zinc-950">
-                      {GESTORES_TRAFEGO.map((g) => (
-                        <SelectItem key={g} value={g}>{g}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                {/* Gestor de tráfego */}
+                <TableCell className="text-zinc-400 whitespace-nowrap text-xs">
+                  {isAdmin ? (
+                    <Select value={cliente.gestor_trafego || ""} onValueChange={(v) => { if (v) handleInlineChange(cliente.id, "gestor_trafego", v); }}>
+                      <SelectTrigger className="h-8 w-[140px] border-zinc-800 bg-transparent text-xs text-zinc-300"><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectContent className="border-zinc-800 bg-zinc-950">{GESTORES_TRAFEGO.map((g) => (<SelectItem key={g} value={g}>{g}</SelectItem>))}</SelectContent>
+                    </Select>
+                  ) : (cliente.gestor_trafego || "—")}
                 </TableCell>
                 {/* Head */}
                 <TableCell className="text-zinc-400 whitespace-nowrap">
@@ -425,12 +402,14 @@ export function TabelaClientes({ clientes }: TabelaClientesProps) {
                     <DropdownMenuContent className="border-zinc-800 bg-zinc-950">
                       <DropdownMenuItem className="text-zinc-300 gap-2" onClick={() => router.push(`/clientes/${cliente.id}`)}>
                         <Pencil className="h-3.5 w-3.5" />
-                        Ver/Editar
+                        Ver detalhes
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-400 gap-2" onClick={() => setExcluirDialog({ id: cliente.id, nome: cliente.nome })}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Excluir cliente
-                      </DropdownMenuItem>
+                      {isAdmin && (
+                        <DropdownMenuItem className="text-red-400 gap-2" onClick={() => setExcluirDialog({ id: cliente.id, nome: cliente.nome })}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Excluir cliente
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

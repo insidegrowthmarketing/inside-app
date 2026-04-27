@@ -25,10 +25,13 @@ import { FinanceiroCharts } from "@/app/(app)/financeiro/financeiro-charts";
 import { AutoCuraToast } from "@/app/(app)/financeiro/auto-cura-toast";
 import { autoCurarFaturas } from "@/app/(app)/financeiro/actions";
 import type { Fatura } from "@/types/fatura";
+import { ehAdmin } from "@/lib/permissoes";
 
 export default async function DashboardFinanceiroPage() {
   const autoCura = await autoCurarFaturas();
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isAdmin = ehAdmin(user?.email);
   const hoje = new Date();
   const hojeStr = hoje.toISOString().split("T")[0];
   const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split("T")[0];
@@ -61,7 +64,7 @@ export default async function DashboardFinanceiroPage() {
   return (
     <div className="space-y-6">
       <PageHeader titulo="Financeiro" subtitulo="Controle de cobranças e recebimentos">
-        <GerarFaturasButton />
+        {isAdmin && <GerarFaturasButton />}
       </PageHeader>
       <AutoCuraToast faturasGeradas={autoCura.count} />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">

@@ -10,30 +10,32 @@ import {
   cancelarFaturasFuturas,
 } from "@/app/(app)/financeiro/actions";
 import { clienteGeraFaturasAutomaticamente } from "@/lib/faturas";
+import { ehAdmin, podeCriarCliente } from "@/lib/permissoes";
+
+/** Retorna email do usuário logado */
+async function getEmailLogado() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  return user?.email;
+}
 
 /** Cria um novo cliente e gera faturas automaticamente */
 export async function criarCliente(formData: unknown) {
-  const parsed = clienteSchema.safeParse(formData);
+  const email = await getEmailLogado();
+  if (!podeCriarCliente(email)) return { error: "Sem permissão para criar cliente." };
 
-  if (!parsed.success) {
-    return { error: "Dados inválidos. Verifique os campos obrigatórios." };
-  }
+  const parsed = clienteSchema.safeParse(formData);
+  if (!parsed.success) return { error: "Dados inválidos. Verifique os campos obrigatórios." };
 
   const supabase = await createClient();
   const dados = limparDadosVazios(parsed.data);
 
-  const { data, error } = await supabase
-    .from("clientes")
-    .insert(dados)
-    .select("id")
-    .single();
-
+  const { data, error } = await supabase.from("clientes").insert(dados).select("id").single();
   if (error || !data) {
     console.error("Erro ao criar cliente:", error);
     return { error: "Erro ao salvar cliente. Tente novamente." };
   }
 
-  // Gerar faturas apenas para formas que permitem (não Stripe/ASAAS/onboarding)
   let faturasGeradas = 0;
   if (clienteGeraFaturasAutomaticamente(parsed.data)) {
     const resultado = await gerarFaturasIniciaisDoCliente(data.id);
@@ -46,39 +48,39 @@ export async function criarCliente(formData: unknown) {
   return { clienteId: data.id, faturasGeradas };
 }
 
-/** Atualiza um cliente e regenera faturas se necessário */
+/** Atualiza um cliente — admin edita tudo, outros só status */
 export async function atualizarCliente(id: string, formData: unknown) {
+  const email = await getEmailLogado();
   const parsed = clienteSchema.safeParse(formData);
-
-  if (!parsed.success) {
-    return { error: "Dados inválidos. Verifique os campos obrigatórios." };
-  }
+  if (!parsed.success) return { error: "Dados inválidos. Verifique os campos obrigatórios." };
 
   const supabase = await createClient();
-  const dados = limparDadosVazios(parsed.data);
 
-  const { error } = await supabase.from("clientes").update(dados).eq("id", id);
+  if (ehAdmin(email)) {
+    // Admin pode atualizar TUDO
+    const dados = limparDadosVazios(parsed.data);
+    const { error } = await supabase.from("clientes").update(dados).eq("id", id);
+    if (error) { console.error("Erro ao atualizar cliente:", error); return { error: "Erro ao atualizar cliente." }; }
 
-  if (error) {
-    console.error("Erro ao atualizar cliente:", error);
-    return { error: "Erro ao atualizar cliente. Tente novamente." };
-  }
+    const statusAtual = parsed.data.status;
+    if ((STATUS_ATIVOS as readonly string[]).includes(statusAtual) && clienteGeraFaturasAutomaticamente(parsed.data)) {
+      await gerarFaturasIniciaisDoCliente(id);
+    }
+    if (statusAtual === "churn" && parsed.data.data_saida) {
+      await cancelarFaturasFuturas(id, parsed.data.data_saida);
+    }
+  } else {
+    // Não-admin: só pode mudar status, data_saida e motivo_churn
+    const { error } = await supabase.from("clientes").update({
+      status: parsed.data.status,
+      data_saida: parsed.data.data_saida || null,
+      motivo_churn: parsed.data.motivo_churn || null,
+    }).eq("id", id);
+    if (error) { console.error("Erro ao atualizar status:", error); return { error: "Erro ao atualizar." }; }
 
-  // Se cliente continua ativo E não é Stripe/ASAAS, regenerar faturas
-  const statusAtual = parsed.data.status;
-  let faturasGeradas = 0;
-
-  if (
-    (STATUS_ATIVOS as readonly string[]).includes(statusAtual) &&
-    clienteGeraFaturasAutomaticamente(parsed.data)
-  ) {
-    const resultado = await gerarFaturasIniciaisDoCliente(id);
-    faturasGeradas = resultado.count;
-  }
-
-  // Se churn com data_saida, cancelar faturas pendentes após a data de saída
-  if (statusAtual === "churn" && parsed.data.data_saida) {
-    await cancelarFaturasFuturas(id, parsed.data.data_saida);
+    if (parsed.data.status === "churn" && parsed.data.data_saida) {
+      await cancelarFaturasFuturas(id, parsed.data.data_saida);
+    }
   }
 
   revalidatePath("/clientes");
@@ -89,16 +91,14 @@ export async function atualizarCliente(id: string, formData: unknown) {
   redirect(`/clientes/${id}`);
 }
 
-/** Exclui um cliente do Supabase (faturas são deletadas via CASCADE) */
+/** Exclui um cliente — só admin */
 export async function excluirCliente(id: string) {
+  const email = await getEmailLogado();
+  if (!ehAdmin(email)) return { error: "Sem permissão." };
+
   const supabase = await createClient();
-
   const { error } = await supabase.from("clientes").delete().eq("id", id);
-
-  if (error) {
-    console.error("Erro ao excluir cliente:", error);
-    return { error: "Erro ao excluir cliente. Tente novamente." };
-  }
+  if (error) { console.error("Erro ao excluir cliente:", error); return { error: "Erro ao excluir cliente." }; }
 
   revalidatePath("/clientes");
   revalidatePath("/clientes/ltv");
@@ -107,16 +107,14 @@ export async function excluirCliente(id: string) {
   return { success: true };
 }
 
-/** Exclui múltiplos clientes em massa */
+/** Exclui múltiplos clientes — só admin */
 export async function excluirClientesEmMassa(ids: string[]) {
+  const email = await getEmailLogado();
+  if (!ehAdmin(email)) return { error: "Sem permissão." };
+
   const supabase = await createClient();
-
   const { error } = await supabase.from("clientes").delete().in("id", ids);
-
-  if (error) {
-    console.error("Erro ao excluir clientes em massa:", error);
-    return { error: "Erro ao excluir clientes. Tente novamente." };
-  }
+  if (error) return { error: "Erro ao excluir clientes." };
 
   revalidatePath("/clientes");
   revalidatePath("/clientes/ltv");
@@ -125,23 +123,14 @@ export async function excluirClientesEmMassa(ids: string[]) {
   return { success: true, count: ids.length };
 }
 
-/** Atualiza um campo individual de um cliente (dropdown inline) */
-export async function atualizarCampoCliente(
-  id: string,
-  campo: string,
-  valor: string | null
-) {
+/** Atualiza um campo individual — status permitido pra todos, outros só admin */
+export async function atualizarCampoCliente(id: string, campo: string, valor: string | null) {
+  const email = await getEmailLogado();
+  if (campo !== "status" && !ehAdmin(email)) return { error: "Sem permissão." };
+
   const supabase = await createClient();
-
-  const { error } = await supabase
-    .from("clientes")
-    .update({ [campo]: valor })
-    .eq("id", id);
-
-  if (error) {
-    console.error(`Erro ao atualizar ${campo}:`, error);
-    return { error: `Erro ao atualizar. Tente novamente.` };
-  }
+  const { error } = await supabase.from("clientes").update({ [campo]: valor }).eq("id", id);
+  if (error) return { error: "Erro ao atualizar." };
 
   revalidatePath("/clientes");
   revalidatePath("/clientes/ltv");
@@ -149,22 +138,16 @@ export async function atualizarCampoCliente(
   return { success: true };
 }
 
-/** Atualiza o pacote de um cliente com lógica de fim_contrato */
+/** Atualiza pacote — só admin */
 export async function atualizarPacoteCliente(id: string, novoPacote: string) {
+  const email = await getEmailLogado();
+  if (!ehAdmin(email)) return { error: "Sem permissão." };
+
   const supabase = await createClient();
-
-  const { data: cliente, error: fetchErr } = await supabase
-    .from("clientes")
-    .select("inicio_contrato")
-    .eq("id", id)
-    .single();
-
-  if (fetchErr || !cliente) {
-    return { error: "Erro ao buscar cliente." };
-  }
+  const { data: cliente, error: fetchErr } = await supabase.from("clientes").select("inicio_contrato").eq("id", id).single();
+  if (fetchErr || !cliente) return { error: "Erro ao buscar cliente." };
 
   const updateData: Record<string, unknown> = { pacote: novoPacote };
-
   if (novoPacote === "start" && cliente.inicio_contrato) {
     const inicio = new Date(cliente.inicio_contrato + "T00:00:00");
     inicio.setDate(inicio.getDate() + 35);
@@ -173,108 +156,51 @@ export async function atualizarPacoteCliente(id: string, novoPacote: string) {
     updateData.fim_contrato = null;
   }
 
-  const { error } = await supabase
-    .from("clientes")
-    .update(updateData)
-    .eq("id", id);
-
-  if (error) {
-    console.error("Erro ao atualizar pacote:", error);
-    return { error: "Erro ao atualizar pacote. Tente novamente." };
-  }
+  const { error } = await supabase.from("clientes").update(updateData).eq("id", id);
+  if (error) return { error: "Erro ao atualizar pacote." };
 
   revalidatePath("/clientes");
   return { success: true };
 }
 
-/** Marca um cliente como churn + cancela faturas futuras */
-export async function marcarChurn(
-  id: string,
-  dataSaida: string,
-  motivoChurn: string | null
-) {
+/** Marca churn — todos podem (é mudança de status) */
+export async function marcarChurn(id: string, dataSaida: string, motivoChurn: string | null) {
   const supabase = await createClient();
-
-  const { error } = await supabase
-    .from("clientes")
-    .update({
-      status: "churn",
-      data_saida: dataSaida,
-      motivo_churn: motivoChurn,
-    })
-    .eq("id", id);
-
-  if (error) {
-    console.error("Erro ao marcar churn:", error);
-    return { error: "Erro ao marcar churn. Tente novamente." };
-  }
-
-  // Cancelar faturas pendentes após data de saída
+  const { error } = await supabase.from("clientes").update({ status: "churn", data_saida: dataSaida, motivo_churn: motivoChurn }).eq("id", id);
+  if (error) return { error: "Erro ao marcar churn." };
   await cancelarFaturasFuturas(id, dataSaida);
-
   revalidatePath("/clientes");
   revalidatePath("/clientes/ltv");
   revalidatePath("/financeiro");
   return { success: true };
 }
 
-/** Marca múltiplos clientes como churn em massa + cancela faturas */
-export async function marcarChurnEmMassa(
-  ids: string[],
-  dataSaida: string,
-  motivoChurn: string | null
-) {
+/** Marca churn em massa — todos podem (status) */
+export async function marcarChurnEmMassa(ids: string[], dataSaida: string, motivoChurn: string | null) {
   const supabase = await createClient();
-
-  const { error } = await supabase
-    .from("clientes")
-    .update({
-      status: "churn",
-      data_saida: dataSaida,
-      motivo_churn: motivoChurn,
-    })
-    .in("id", ids);
-
-  if (error) {
-    console.error("Erro ao marcar churn em massa:", error);
-    return { error: "Erro ao marcar churn. Tente novamente." };
-  }
-
-  // Cancelar faturas futuras de todos os clientes
-  for (const id of ids) {
-    await cancelarFaturasFuturas(id, dataSaida);
-  }
-
+  const { error } = await supabase.from("clientes").update({ status: "churn", data_saida: dataSaida, motivo_churn: motivoChurn }).in("id", ids);
+  if (error) return { error: "Erro ao marcar churn." };
+  for (const id of ids) await cancelarFaturasFuturas(id, dataSaida);
   revalidatePath("/clientes");
   revalidatePath("/clientes/ltv");
   revalidatePath("/financeiro");
   return { success: true, count: ids.length };
 }
 
-/** Atualiza um campo em massa para múltiplos clientes */
-export async function atualizarClientesEmMassa(
-  ids: string[],
-  campo: string,
-  valor: string | null
-) {
+/** Atualiza campo em massa — só admin */
+export async function atualizarClientesEmMassa(ids: string[], campo: string, valor: string | null) {
+  const email = await getEmailLogado();
+  if (!ehAdmin(email)) return { error: "Sem permissão." };
+
   const supabase = await createClient();
-
-  const { error } = await supabase
-    .from("clientes")
-    .update({ [campo]: valor })
-    .in("id", ids);
-
-  if (error) {
-    console.error(`Erro ao atualizar em massa:`, error);
-    return { error: "Erro ao atualizar clientes. Tente novamente." };
-  }
+  const { error } = await supabase.from("clientes").update({ [campo]: valor }).in("id", ids);
+  if (error) return { error: "Erro ao atualizar clientes." };
 
   revalidatePath("/clientes");
   revalidatePath("/clientes/ltv");
   return { success: true, count: ids.length };
 }
 
-/** Remove strings vazias para enviar null ao banco */
 function limparDadosVazios(dados: Record<string, unknown>) {
   const limpo: Record<string, unknown> = {};
   for (const [chave, valor] of Object.entries(dados)) {

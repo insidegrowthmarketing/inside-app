@@ -10,6 +10,13 @@ import {
 } from "@/lib/faturas";
 import { STATUS_ATIVOS } from "@/types/cliente";
 import type { Cliente } from "@/types/cliente";
+import { ehAdmin } from "@/lib/permissoes";
+
+async function getEmailLogado() {
+  const sb = await createClient();
+  const { data: { user } } = await sb.auth.getUser();
+  return user?.email;
+}
 
 /** Revalida rotas afetadas pelo financeiro (só chamar de Server Actions diretas) */
 function revalidar() {
@@ -159,8 +166,10 @@ export async function cancelarFaturasFuturas(
 // Estas SIM chamam revalidar()
 // =============================================
 
-/** Gera faturas do mês para todos os clientes ativos (botão manual) */
+/** Gera faturas do mês para todos os clientes ativos (botão manual) — só admin */
 export async function gerarFaturasDoMes(mesStr: string) {
+  const email = await getEmailLogado();
+  if (!ehAdmin(email)) return { error: "Sem permissão.", count: 0 };
   const supabase = await createClient();
   const mes = new Date(mesStr + "T00:00:00");
   const inicioMes = new Date(mes.getFullYear(), mes.getMonth(), 1);
@@ -197,11 +206,10 @@ export async function gerarFaturasAvisoPrevio(
   return resultado;
 }
 
-/** Marca uma fatura como paga */
-export async function marcarFaturaComoPaga(
-  faturaId: string,
-  dataPagamentoReal: string
-) {
+/** Marca uma fatura como paga — só admin */
+export async function marcarFaturaComoPaga(faturaId: string, dataPagamentoReal: string) {
+  const email = await getEmailLogado();
+  if (!ehAdmin(email)) return { error: "Sem permissão." };
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -215,8 +223,10 @@ export async function marcarFaturaComoPaga(
   return { success: true };
 }
 
-/** Registra data da última cobrança */
+/** Registra data da última cobrança — só admin */
 export async function registrarCobranca(faturaId: string) {
+  const email = await getEmailLogado();
+  if (!ehAdmin(email)) return { error: "Sem permissão." };
   const supabase = await createClient();
   const hoje = new Date().toISOString().split("T")[0];
 
@@ -231,8 +241,10 @@ export async function registrarCobranca(faturaId: string) {
   return { success: true };
 }
 
-/** Cancela uma fatura (Server Action direta) */
+/** Cancela uma fatura — só admin */
 export async function cancelarFatura(faturaId: string) {
+  const email = await getEmailLogado();
+  if (!ehAdmin(email)) return { error: "Sem permissão." };
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -246,11 +258,10 @@ export async function cancelarFatura(faturaId: string) {
   return { success: true };
 }
 
-/** Atualiza campos de uma fatura */
-export async function atualizarFatura(
-  faturaId: string,
-  dados: Record<string, unknown>
-) {
+/** Atualiza campos de uma fatura — só admin */
+export async function atualizarFatura(faturaId: string, dados: Record<string, unknown>) {
+  const email = await getEmailLogado();
+  if (!ehAdmin(email)) return { error: "Sem permissão." };
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -264,12 +275,10 @@ export async function atualizarFatura(
   return { success: true };
 }
 
-/** Ações em massa em faturas */
-export async function acoesMassaFaturas(
-  faturaIds: string[],
-  acao: "marcar_paga" | "cancelar",
-  dataPagamento?: string
-) {
+/** Ações em massa em faturas — só admin */
+export async function acoesMassaFaturas(faturaIds: string[], acao: "marcar_paga" | "cancelar", dataPagamento?: string) {
+  const email = await getEmailLogado();
+  if (!ehAdmin(email)) return { error: "Sem permissão." };
   const supabase = await createClient();
 
   if (acao === "marcar_paga") {

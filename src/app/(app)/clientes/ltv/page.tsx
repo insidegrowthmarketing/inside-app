@@ -17,6 +17,7 @@ import { PACOTES } from "@/types/cliente";
 import type { Cliente } from "@/types/cliente";
 import { LtvFilters } from "./ltv-filters";
 import { LtvAcoes } from "./ltv-acoes";
+import { ehAdmin } from "@/lib/permissoes";
 
 interface PageProps {
   searchParams: Promise<{
@@ -45,6 +46,8 @@ function getLabelPacote(value: string | null) {
 export default async function LtvPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isAdmin = ehAdmin(user?.email);
 
   let query = supabase
     .from("clientes")
@@ -221,7 +224,7 @@ export default async function LtvPage({ searchParams }: PageProps) {
                         {cliente.motivo_churn || "—"}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
-                        <LtvAcoes clienteId={cliente.id} clienteNome={cliente.nome} />
+                        <LtvAcoes clienteId={cliente.id} clienteNome={cliente.nome} isAdmin={isAdmin} />
                       </TableCell>
                     </TableRow>
                   );

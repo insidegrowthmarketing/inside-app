@@ -48,11 +48,13 @@ import type { Cliente } from "@/types/cliente";
 
 interface ClienteFormProps {
   cliente?: Cliente;
+  isAdmin?: boolean;
 }
 
-export function ClienteForm({ cliente }: ClienteFormProps) {
+export function ClienteForm({ cliente, isAdmin = true }: ClienteFormProps) {
   const router = useRouter();
   const modoEdicao = !!cliente;
+  const somenteLeitura = modoEdicao && !isAdmin;
 
   const {
     register,
@@ -291,6 +293,13 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
           </Card>
         )}
 
+        {/* Aviso de modo leitura */}
+        {somenteLeitura && (
+          <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+            <p className="text-sm text-amber-400">Modo leitura — você pode alterar apenas o status do cliente.</p>
+          </div>
+        )}
+
         {/* Seção 1: Informações gerais */}
         <Card className="border-zinc-800 bg-zinc-900">
           <CardHeader>
@@ -514,11 +523,13 @@ export function ClienteForm({ cliente }: ClienteFormProps) {
 
         {/* Botões de ação */}
         <div className="flex items-center justify-end gap-3">
-          <Button type="button" variant="ghost" className="text-zinc-400 hover:text-white" onClick={() => router.push("/clientes")}>Cancelar</Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {modoEdicao ? "Salvar alterações" : "Salvar cliente"}
-          </Button>
+          <Button type="button" variant="ghost" className="text-zinc-400 hover:text-white" onClick={() => router.push("/clientes")}>Voltar</Button>
+          {!somenteLeitura && (
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {modoEdicao ? "Salvar alterações" : "Salvar cliente"}
+            </Button>
+          )}
         </div>
       </form>
 

@@ -6,6 +6,7 @@ import { FiltrosFaturas } from "./filtros-faturas";
 import { TabelaFaturas } from "./tabela-faturas";
 import { calcularStatusRuntime } from "@/types/fatura";
 import type { FaturaComCliente } from "@/types/fatura";
+import { ehAdmin } from "@/lib/permissoes";
 
 interface PageProps {
   searchParams: Promise<{
@@ -20,6 +21,8 @@ interface PageProps {
 export default async function CobrancasPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isAdmin = ehAdmin(user?.email);
   const hojeStr = new Date().toISOString().split("T")[0];
 
   let query = supabase
@@ -120,7 +123,7 @@ export default async function CobrancasPage({ searchParams }: PageProps) {
             </CardContent>
           </Card>
         ) : (
-          <TabelaFaturas faturas={lista} />
+          <TabelaFaturas faturas={lista} isAdmin={isAdmin} />
         )}
     </div>
   );

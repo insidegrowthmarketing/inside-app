@@ -47,6 +47,7 @@ import { cn } from "@/lib/utils";
 
 interface TabelaFaturasProps {
   faturas: FaturaComCliente[];
+  isAdmin: boolean;
 }
 
 function StatusBadgeFatura({ status }: { status: StatusFaturaRuntime }) {
@@ -65,7 +66,7 @@ function StatusBadgeFatura({ status }: { status: StatusFaturaRuntime }) {
   return <Badge className={cn("border-0 text-xs font-medium", cores[status])}>{labels[status]}</Badge>;
 }
 
-export function TabelaFaturas({ faturas }: TabelaFaturasProps) {
+export function TabelaFaturas({ faturas, isAdmin }: TabelaFaturasProps) {
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [dialogPaga, setDialogPaga] = useState<string | null>(null); // faturaId
   const [dataPgto, setDataPgto] = useState(new Date().toISOString().split("T")[0]);
@@ -145,8 +146,8 @@ export function TabelaFaturas({ faturas }: TabelaFaturasProps) {
 
   return (
     <>
-      {/* Barra de ação em massa */}
-      {selecionados.size > 0 && (
+      {/* Barra de ação em massa — só admin */}
+      {isAdmin && selecionados.size > 0 && (
         <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 mb-4">
           <span className="text-sm text-zinc-300 font-medium">
             {selecionados.size} fatura{selecionados.size > 1 ? "s" : ""} selecionada{selecionados.size > 1 ? "s" : ""}
@@ -164,7 +165,7 @@ export function TabelaFaturas({ faturas }: TabelaFaturasProps) {
         <Table>
           <TableHeader>
             <TableRow className="border-zinc-800 hover:bg-transparent">
-              <TableHead className="w-10 text-zinc-400"><Checkbox checked={todosSelecionados} onCheckedChange={toggleTodos} /></TableHead>
+              {isAdmin && <TableHead className="w-10 text-zinc-400"><Checkbox checked={todosSelecionados} onCheckedChange={toggleTodos} /></TableHead>}
               <TableHead className="text-zinc-400 whitespace-nowrap">Cliente</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Referência</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Vencimento</TableHead>
@@ -174,7 +175,7 @@ export function TabelaFaturas({ faturas }: TabelaFaturasProps) {
               <TableHead className="text-zinc-400 whitespace-nowrap">Status</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Data pgto</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Últ. cobrança</TableHead>
-              <TableHead className="text-zinc-400 whitespace-nowrap text-right">Ações</TableHead>
+              {isAdmin && <TableHead className="text-zinc-400 whitespace-nowrap text-right">Ações</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -184,7 +185,7 @@ export function TabelaFaturas({ faturas }: TabelaFaturasProps) {
               const diasAtraso = statusRT === "atrasada" ? Math.ceil((hoje.getTime() - venc.getTime()) / 86400000) : 0;
               return (
                 <TableRow key={f.id} className="border-zinc-800 hover:bg-zinc-800/50">
-                  <TableCell><Checkbox checked={selecionados.has(f.id)} onCheckedChange={() => toggleUm(f.id)} /></TableCell>
+                  {isAdmin && <TableCell><Checkbox checked={selecionados.has(f.id)} onCheckedChange={() => toggleUm(f.id)} /></TableCell>}
                   <TableCell className="font-medium text-zinc-200 whitespace-nowrap">
                     <Link href={`/clientes/${f.clientes?.id || f.cliente_id}`} className="hover:underline">{f.clientes?.nome || "—"}</Link>
                   </TableCell>
@@ -198,19 +199,21 @@ export function TabelaFaturas({ faturas }: TabelaFaturasProps) {
                   <TableCell><StatusBadgeFatura status={statusRT} /></TableCell>
                   <TableCell className="text-zinc-400 whitespace-nowrap">{formatarData(f.data_pagamento_real)}</TableCell>
                   <TableCell className="text-zinc-500 whitespace-nowrap">{formatarData(f.ultima_cobranca_em)}</TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-zinc-400 hover:text-white" />}>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="border-zinc-800 bg-zinc-950">
-                        <DropdownMenuItem className="text-zinc-300" onClick={() => { setDialogPaga(f.id); setDataPgto(new Date().toISOString().split("T")[0]); }}>Marcar como paga</DropdownMenuItem>
-                        <DropdownMenuItem className="text-zinc-300" onClick={() => handleRegistrarCobranca(f.id)}>Registrar cobrança</DropdownMenuItem>
-                        <DropdownMenuItem className="text-zinc-300" onClick={() => { setDialogEditar(f); setEditValor(String(f.valor)); setEditVencimento(f.data_vencimento); setEditObs(f.observacoes || ""); }}>Editar</DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-400" onClick={() => handleCancelar(f.id)}>Cancelar fatura</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+                  {isAdmin && (
+                    <TableCell className="text-right whitespace-nowrap">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-zinc-400 hover:text-white" />}>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="border-zinc-800 bg-zinc-950">
+                          <DropdownMenuItem className="text-zinc-300" onClick={() => { setDialogPaga(f.id); setDataPgto(new Date().toISOString().split("T")[0]); }}>Marcar como paga</DropdownMenuItem>
+                          <DropdownMenuItem className="text-zinc-300" onClick={() => handleRegistrarCobranca(f.id)}>Registrar cobrança</DropdownMenuItem>
+                          <DropdownMenuItem className="text-zinc-300" onClick={() => { setDialogEditar(f); setEditValor(String(f.valor)); setEditVencimento(f.data_vencimento); setEditObs(f.observacoes || ""); }}>Editar</DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-400" onClick={() => handleCancelar(f.id)}>Cancelar fatura</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             })}

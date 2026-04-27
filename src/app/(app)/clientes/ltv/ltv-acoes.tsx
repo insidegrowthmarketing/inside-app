@@ -24,9 +24,10 @@ import { excluirCliente } from "../actions";
 interface LtvAcoesProps {
   clienteId: string;
   clienteNome: string;
+  isAdmin: boolean;
 }
 
-export function LtvAcoes({ clienteId, clienteNome }: LtvAcoesProps) {
+export function LtvAcoes({ clienteId, clienteNome, isAdmin }: LtvAcoesProps) {
   const router = useRouter();
   const [excluirAberto, setExcluirAberto] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
@@ -54,10 +55,12 @@ export function LtvAcoes({ clienteId, clienteNome }: LtvAcoesProps) {
             <Pencil className="h-3.5 w-3.5" />
             Ver detalhes
           </DropdownMenuItem>
-          <DropdownMenuItem className="text-red-400 gap-2" onClick={() => setExcluirAberto(true)}>
-            <Trash2 className="h-3.5 w-3.5" />
-            Excluir cliente
-          </DropdownMenuItem>
+          {isAdmin && (
+            <DropdownMenuItem className="text-red-400 gap-2" onClick={() => setExcluirAberto(true)}>
+              <Trash2 className="h-3.5 w-3.5" />
+              Excluir cliente
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 

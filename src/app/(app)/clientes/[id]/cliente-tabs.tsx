@@ -9,9 +9,10 @@ import type { Fatura } from "@/types/fatura";
 interface ClienteTabsProps {
   cliente: Cliente;
   faturas: Fatura[];
+  isAdmin: boolean;
 }
 
-export function ClienteTabs({ cliente, faturas }: ClienteTabsProps) {
+export function ClienteTabs({ cliente, faturas, isAdmin }: ClienteTabsProps) {
   return (
     <Tabs defaultValue="dados">
       <TabsList className="bg-zinc-900 border border-zinc-800 mb-6">
@@ -24,7 +25,7 @@ export function ClienteTabs({ cliente, faturas }: ClienteTabsProps) {
       </TabsList>
 
       <TabsContent value="dados">
-        <ClienteForm cliente={cliente} />
+        <ClienteForm cliente={cliente} isAdmin={isAdmin} />
       </TabsContent>
       <TabsContent value="financeiro">
         <ClienteFinanceiro faturas={faturas} moeda={cliente.moeda || "BRL"} />

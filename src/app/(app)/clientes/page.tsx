@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ClientesFilters } from "./filters";
 import { TabelaClientes } from "./tabela-clientes";
 import type { Cliente } from "@/types/cliente";
+import { podeCriarCliente, ehAdmin } from "@/lib/permissoes";
 
 interface PageProps {
   searchParams: Promise<{
@@ -24,6 +25,10 @@ interface PageProps {
 export default async function ClientesPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const userEmail = user?.email ?? "";
+  const isAdmin = ehAdmin(userEmail);
+  const podeCriar = podeCriarCliente(userEmail);
 
   let query = supabase
     .from("clientes")
@@ -31,32 +36,15 @@ export default async function ClientesPage({ searchParams }: PageProps) {
     .neq("status", "churn")
     .order("inicio_contrato", { ascending: true, nullsFirst: false });
 
-  if (params.status && params.status !== "todos") {
-    query = query.eq("status", params.status);
-  }
-  if (params.busca) {
-    query = query.ilike("nome", `%${params.busca}%`);
-  }
-  if (params.forma_pagamento && params.forma_pagamento !== "todos") {
-    query = query.eq("forma_pagamento", params.forma_pagamento);
-  }
-  if (params.gestor_projetos && params.gestor_projetos !== "todos") {
-    query = query.eq("gestor_projetos", params.gestor_projetos);
-  }
-  if (params.gestor_trafego && params.gestor_trafego !== "todos") {
-    query = query.eq("gestor_trafego", params.gestor_trafego);
-  }
-  if (params.pacote && params.pacote !== "todos") {
-    query = query.eq("pacote", params.pacote);
-  }
-  if (params.pais === "brasil") {
-    query = query.eq("moeda", "BRL");
-  } else if (params.pais === "eua") {
-    query = query.eq("moeda", "USD");
-  }
-  if (params.head && params.head !== "todos") {
-    query = query.eq("head", params.head);
-  }
+  if (params.status && params.status !== "todos") query = query.eq("status", params.status);
+  if (params.busca) query = query.ilike("nome", `%${params.busca}%`);
+  if (params.forma_pagamento && params.forma_pagamento !== "todos") query = query.eq("forma_pagamento", params.forma_pagamento);
+  if (params.gestor_projetos && params.gestor_projetos !== "todos") query = query.eq("gestor_projetos", params.gestor_projetos);
+  if (params.gestor_trafego && params.gestor_trafego !== "todos") query = query.eq("gestor_trafego", params.gestor_trafego);
+  if (params.pacote && params.pacote !== "todos") query = query.eq("pacote", params.pacote);
+  if (params.pais === "brasil") query = query.eq("moeda", "BRL");
+  else if (params.pais === "eua") query = query.eq("moeda", "USD");
+  if (params.head && params.head !== "todos") query = query.eq("head", params.head);
 
   const { data: clientes, error } = await query;
   if (error) console.error("Erro ao buscar clientes:", error);
@@ -75,12 +63,11 @@ export default async function ClientesPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-4">
       <PageHeader titulo="Base de Clientes" subtitulo="Gerencie todos os clientes ativos da agência">
-        <Link href="/clientes/novo">
-          <Button size="sm" className="gap-2">
-            <Plus className="h-4 w-4" />
-            Novo cliente
-          </Button>
-        </Link>
+        {podeCriar && (
+          <Link href="/clientes/novo">
+            <Button size="sm" className="gap-2"><Plus className="h-4 w-4" />Novo cliente</Button>
+          </Link>
+        )}
       </PageHeader>
 
       <ClientesFilters filtros={filtros} />
@@ -93,15 +80,10 @@ export default async function ClientesPage({ searchParams }: PageProps) {
             <p className="mb-6 text-sm text-zinc-500">
               {params.busca || params.status ? "Tente ajustar os filtros de busca." : "Cadastre seu primeiro cliente para começar."}
             </p>
-            {!params.busca && !params.status && (
-              <Link href="/clientes/novo">
-                <Button size="sm" className="gap-2"><Plus className="h-4 w-4" />Cadastre seu primeiro cliente</Button>
-              </Link>
-            )}
           </CardContent>
         </Card>
       ) : (
-        <TabelaClientes clientes={clientes as Cliente[]} />
+        <TabelaClientes clientes={clientes as Cliente[]} isAdmin={isAdmin} />
       )}
     </div>
   );
