@@ -25,6 +25,7 @@ interface PageProps {
     gestor_projetos?: string;
     gestor_trafego?: string;
     pais?: string;
+    motivo_churn?: string;
   }>;
 }
 
@@ -72,6 +73,9 @@ export default async function LtvPage({ searchParams }: PageProps) {
   } else if (params.pais === "eua") {
     query = query.eq("moeda", "USD");
   }
+  if (params.motivo_churn && params.motivo_churn !== "todos") {
+    query = query.eq("motivo_churn", params.motivo_churn);
+  }
 
   const { data: clientes, error } = await query;
 
@@ -99,6 +103,7 @@ export default async function LtvPage({ searchParams }: PageProps) {
     gestor_projetos: params.gestor_projetos || "todos",
     gestor_trafego: params.gestor_trafego || "todos",
     pais: params.pais || "todos",
+    motivo_churn: params.motivo_churn || "todos",
     busca: params.busca || "",
   };
 

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { createClient } from "@/lib/supabase/server";
 import { BotaoExcluir } from "./botao-excluir";
+import { BotaoRecuperar } from "./botao-recuperar";
 import { ClienteTabs } from "./cliente-tabs";
 import type { Fatura } from "@/types/fatura";
 import { ehAdmin } from "@/lib/permissoes";
@@ -33,9 +34,12 @@ export default async function DetalhesClientePage({ params }: PageProps) {
     .eq("cliente_id", id)
     .order("data_vencimento", { ascending: false });
 
+  const isChurn = cliente.status === "churn";
+
   return (
     <div>
       <PageHeader titulo={cliente.nome} subtitulo="Editar informações do cliente">
+        {isAdmin && isChurn && <BotaoRecuperar clienteId={cliente.id} clienteNome={cliente.nome} />}
         {isAdmin && <BotaoExcluir clienteId={cliente.id} clienteNome={cliente.nome} />}
       </PageHeader>
       <div className="mx-auto max-w-3xl">

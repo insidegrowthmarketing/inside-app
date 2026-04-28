@@ -27,7 +27,7 @@ export default async function CobrancasPage({ searchParams }: PageProps) {
 
   let query = supabase
     .from("faturas")
-    .select("*, clientes(nome, id)")
+    .select("*, clientes(nome, id, responsavel_financeiro, contato_financeiro)")
     .order("data_vencimento", { ascending: false })
     .limit(200);
 

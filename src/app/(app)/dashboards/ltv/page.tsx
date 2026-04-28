@@ -4,7 +4,12 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatarMoeda } from "@/lib/formatters";
+import Link from "next/link";
+import { formatarMoeda, formatarData } from "@/lib/formatters";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import { PACOTES } from "@/types/cliente";
 import type { Cliente } from "@/types/cliente";
 import { getSquadFromHead } from "@/lib/squads";
 import { LtvDashboardFiltro } from "./ltv-dashboard-filtro";
@@ -169,6 +174,55 @@ export default async function DashboardLtvPage({ searchParams }: PageProps) {
         dadosMensais={dadosMensais}
         topLtvs={topLtvs}
       />
+
+      {/* Tabela resumida */}
+      <Card className={cardCls}>
+        <CardHeader className="p-6">
+          <CardTitle className="text-sm font-normal text-zinc-300 uppercase tracking-wider">Clientes churned</CardTitle>
+          <p className="text-xs text-zinc-500 mt-1">Lista respeitando os filtros aplicados</p>
+        </CardHeader>
+        <CardContent className="px-6 pb-6 pt-0">
+          {ltvsPorCliente.length === 0 ? (
+            <p className="py-8 text-center text-sm text-zinc-600">Nenhum cliente churned com esses filtros</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-zinc-800 hover:bg-transparent">
+                    <TableHead className="text-zinc-400 whitespace-nowrap">Nome</TableHead>
+                    <TableHead className="text-zinc-400 whitespace-nowrap">Pacote</TableHead>
+                    <TableHead className="text-zinc-400 whitespace-nowrap">Moeda</TableHead>
+                    <TableHead className="text-zinc-400 whitespace-nowrap">Fee mensal</TableHead>
+                    <TableHead className="text-zinc-400 whitespace-nowrap">Início contrato</TableHead>
+                    <TableHead className="text-zinc-400 whitespace-nowrap">Data saída</TableHead>
+                    <TableHead className="text-zinc-400 whitespace-nowrap">LTV total</TableHead>
+                    <TableHead className="text-zinc-400 whitespace-nowrap">Motivo</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ltvsPorCliente.sort((a, b) => (a.data_saida || "").localeCompare(b.data_saida || "")).map((c) => {
+                    const moeda = c.moeda || "BRL";
+                    return (
+                      <TableRow key={c.id} className="border-zinc-800 hover:bg-zinc-800/50">
+                        <TableCell className="font-medium text-zinc-200 whitespace-nowrap">
+                          <Link href={`/clientes/${c.id}?from=${encodeURIComponent("/dashboards/ltv")}`} className="hover:underline">{c.nome}</Link>
+                        </TableCell>
+                        <TableCell className="text-zinc-300 whitespace-nowrap">{PACOTES.find((p) => p.value === c.pacote)?.label || "—"}</TableCell>
+                        <TableCell className="text-zinc-400 whitespace-nowrap">{moeda === "BRL" ? "R$" : "US$"}</TableCell>
+                        <TableCell className="text-zinc-300 whitespace-nowrap">{formatarMoeda(Number(c.fee_mensal), moeda)}</TableCell>
+                        <TableCell className="text-zinc-400 whitespace-nowrap">{formatarData(c.inicio_contrato)}</TableCell>
+                        <TableCell className="text-zinc-400 whitespace-nowrap">{formatarData(c.data_saida)}</TableCell>
+                        <TableCell className="text-zinc-200 font-medium whitespace-nowrap">{formatarMoeda(c.ltv, moeda)}</TableCell>
+                        <TableCell className="text-zinc-400 max-w-[200px] truncate">{c.motivo_churn || "—"}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

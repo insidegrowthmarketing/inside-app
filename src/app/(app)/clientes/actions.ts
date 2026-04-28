@@ -163,6 +163,35 @@ export async function atualizarPacoteCliente(id: string, novoPacote: string) {
   return { success: true };
 }
 
+/** Recupera cliente do LTV (churn → ongoing) — só admin */
+export async function recuperarCliente(id: string) {
+  const email = await getEmailLogado();
+  if (!ehAdmin(email)) return { error: "Sem permissão." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("clientes").update({
+    status: "ongoing",
+    data_saida: null,
+    motivo_churn: null,
+  }).eq("id", id);
+
+  if (error) return { error: "Erro ao recuperar cliente." };
+
+  // Gerar faturas se aplicável
+  let faturasGeradas = 0;
+  if (clienteGeraFaturasAutomaticamente({ status: "ongoing" })) {
+    const resultado = await gerarFaturasIniciaisDoCliente(id);
+    faturasGeradas = resultado.count;
+  }
+
+  revalidatePath("/clientes");
+  revalidatePath("/clientes/ltv");
+  revalidatePath("/dashboards/ltv");
+  revalidatePath("/dashboards/clientes");
+  revalidatePath("/financeiro/cobrancas");
+  return { success: true, faturasGeradas };
+}
+
 /** Marca churn — todos podem (é mudança de status) */
 export async function marcarChurn(id: string, dataSaida: string, motivoChurn: string | null) {
   const supabase = await createClient();

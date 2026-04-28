@@ -167,6 +167,7 @@ export function TabelaFaturas({ faturas, isAdmin }: TabelaFaturasProps) {
             <TableRow className="border-zinc-800 hover:bg-transparent">
               {isAdmin && <TableHead className="w-10 text-zinc-400"><Checkbox checked={todosSelecionados} onCheckedChange={toggleTodos} /></TableHead>}
               <TableHead className="text-zinc-400 whitespace-nowrap">Cliente</TableHead>
+              <TableHead className="text-zinc-400 whitespace-nowrap">Contato</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Referência</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Vencimento</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Atraso</TableHead>
@@ -188,6 +189,14 @@ export function TabelaFaturas({ faturas, isAdmin }: TabelaFaturasProps) {
                   {isAdmin && <TableCell><Checkbox checked={selecionados.has(f.id)} onCheckedChange={() => toggleUm(f.id)} /></TableCell>}
                   <TableCell className="font-medium text-zinc-200 whitespace-nowrap">
                     <Link href={`/clientes/${f.clientes?.id || f.cliente_id}`} className="hover:underline">{f.clientes?.nome || "—"}</Link>
+                  </TableCell>
+                  <TableCell className="text-zinc-300 whitespace-nowrap text-sm">
+                    {(() => {
+                      const resp = f.clientes?.responsavel_financeiro;
+                      const cont = f.clientes?.contato_financeiro;
+                      if (resp && cont) return `${resp} - ${cont}`;
+                      return resp || cont || "—";
+                    })()}
                   </TableCell>
                   <TableCell className="text-zinc-400 whitespace-nowrap">{formatarReferencia(f.data_referencia, f.forma_pagamento)}</TableCell>
                   <TableCell className="text-zinc-400 whitespace-nowrap">{formatarData(f.data_vencimento)}</TableCell>

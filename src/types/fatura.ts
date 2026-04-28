@@ -21,7 +21,12 @@ export type Fatura = {
 
 /** Fatura com dados do cliente (join) */
 export type FaturaComCliente = Fatura & {
-  clientes: { nome: string; id: string } | null;
+  clientes: {
+    nome: string;
+    id: string;
+    responsavel_financeiro?: string | null;
+    contato_financeiro?: string | null;
+  } | null;
 };
 
 /** Status em runtime (inclui 'atrasada' derivado) */
