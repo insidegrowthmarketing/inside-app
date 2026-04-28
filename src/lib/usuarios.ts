@@ -23,6 +23,8 @@ export const MAPEAMENTO_USUARIOS: Record<string, { nome: string; papel: string; 
   "Comercial@insidetrafegopago.com": { nome: "Comercial", papel: "comercial" },
   "lucasabreu.inside@gmail.com": { nome: "Lucas Abreu", papel: "comercial" },
   "gustavo.menezes@insidetrafegopago.com": { nome: "Gustavo", papel: "comercial" },
+  "gerlainecabralinside@gmail.com": { nome: "Gerlaine", papel: "gestor_projetos", gestor_nome: "Gerlaine" },
+"tainara.inside@gmail.com": { nome: "Tainara", papel: "gestor_trafego" },
 };
 
 /** Busca informações do usuário pelo email (case-insensitive) */
