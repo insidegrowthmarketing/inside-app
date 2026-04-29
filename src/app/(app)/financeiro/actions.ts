@@ -139,6 +139,22 @@ export async function autoCurarFaturas() {
   return { count: totalGeradas };
 }
 
+/** Exclui (deleta) TODAS as faturas pendentes de um cliente. NÃO revalida. */
+export async function excluirFaturasPendentes(clienteId: string) {
+  const supabase = await createClient();
+  const { error, count } = await supabase
+    .from("faturas")
+    .delete()
+    .eq("cliente_id", clienteId)
+    .eq("status", "pendente");
+
+  if (error) {
+    console.error("Erro ao excluir faturas pendentes:", error);
+    return { error: "Erro ao excluir faturas.", count: 0 };
+  }
+  return { count: count ?? 0 };
+}
+
 /** Cancela faturas pendentes após uma data. NÃO revalida. */
 export async function cancelarFaturasFuturas(
   clienteId: string,

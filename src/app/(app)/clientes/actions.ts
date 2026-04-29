@@ -8,8 +8,9 @@ import { STATUS_ATIVOS } from "@/types/cliente";
 import {
   gerarFaturasIniciaisDoCliente,
   cancelarFaturasFuturas,
+  excluirFaturasPendentes,
 } from "@/app/(app)/financeiro/actions";
-import { clienteGeraFaturasAutomaticamente } from "@/lib/faturas";
+import { clienteGeraFaturasAutomaticamente, getFrequenciaDaFormaPagamento } from "@/lib/faturas";
 import { ehAdmin, podeCriarCliente } from "@/lib/permissoes";
 
 /** Retorna email do usuário logado */
@@ -57,15 +58,43 @@ export async function atualizarCliente(id: string, formData: unknown) {
   const supabase = await createClient();
 
   if (ehAdmin(email)) {
+    // Buscar cliente atual pra detectar mudança de forma de pagamento
+    const { data: clienteAtual } = await supabase.from("clientes").select("forma_pagamento").eq("id", id).single();
+    const formaAnterior = clienteAtual?.forma_pagamento || null;
+    const formaNova = parsed.data.forma_pagamento || null;
+
     // Admin pode atualizar TUDO
     const dados = limparDadosVazios(parsed.data);
     const { error } = await supabase.from("clientes").update(dados).eq("id", id);
     if (error) { console.error("Erro ao atualizar cliente:", error); return { error: "Erro ao atualizar cliente." }; }
 
     const statusAtual = parsed.data.status;
-    if ((STATUS_ATIVOS as readonly string[]).includes(statusAtual) && clienteGeraFaturasAutomaticamente(parsed.data)) {
+
+    // Detectar mudança de forma de pagamento
+    const anteriorGera = formaAnterior ? !formaAnterior.toLowerCase().startsWith("stripe") && formaAnterior.toLowerCase() !== "asaas" : false;
+    const novaGera = formaNova ? !formaNova.toLowerCase().startsWith("stripe") && formaNova.toLowerCase() !== "asaas" : false;
+    const freqAnterior = getFrequenciaDaFormaPagamento(formaAnterior);
+    const freqNova = getFrequenciaDaFormaPagamento(formaNova);
+
+    if (anteriorGera && !novaGera) {
+      // STOP_FATURAS: era Zelle/BOFA, virou Stripe/ASAAS → excluir pendentes
+      await excluirFaturasPendentes(id);
+    } else if (!anteriorGera && novaGera) {
+      // START_FATURAS: era Stripe/ASAAS, virou Zelle/BOFA → gerar novas
+      if ((STATUS_ATIVOS as readonly string[]).includes(statusAtual)) {
+        await gerarFaturasIniciaisDoCliente(id);
+      }
+    } else if (anteriorGera && novaGera && freqAnterior !== freqNova) {
+      // MUDA_FREQUENCIA: mudou dentro de Zelle/BOFA → excluir + gerar
+      await excluirFaturasPendentes(id);
+      if ((STATUS_ATIVOS as readonly string[]).includes(statusAtual)) {
+        await gerarFaturasIniciaisDoCliente(id);
+      }
+    } else if (formaAnterior === formaNova && (STATUS_ATIVOS as readonly string[]).includes(statusAtual) && clienteGeraFaturasAutomaticamente(parsed.data)) {
+      // Mesma forma, mas pode precisar gerar faturas faltantes (auto-cura)
       await gerarFaturasIniciaisDoCliente(id);
     }
+
     if (statusAtual === "churn" && parsed.data.data_saida) {
       await cancelarFaturasFuturas(id, parsed.data.data_saida);
     }
@@ -136,6 +165,57 @@ export async function atualizarCampoCliente(id: string, campo: string, valor: st
   revalidatePath("/clientes/ltv");
   revalidatePath("/financeiro");
   return { success: true };
+}
+
+/** Atualiza múltiplos campos de um cliente (ex: forma_pagamento + dia) — só admin */
+export async function atualizarMultiplosCamposCliente(
+  id: string,
+  dados: Record<string, unknown>
+) {
+  const email = await getEmailLogado();
+  if (!ehAdmin(email)) return { error: "Sem permissão." };
+
+  const supabase = await createClient();
+
+  // Buscar forma anterior pra detectar mudança
+  const { data: clienteAtual } = await supabase.from("clientes").select("forma_pagamento, status").eq("id", id).single();
+  const formaAnterior = clienteAtual?.forma_pagamento || null;
+  const formaNova = (dados.forma_pagamento as string) || formaAnterior;
+  const statusAtual = clienteAtual?.status || "ongoing";
+
+  const { error } = await supabase.from("clientes").update(dados).eq("id", id);
+  if (error) return { error: "Erro ao atualizar." };
+
+  // Lógica de faturas
+  const anteriorGera = formaAnterior ? !formaAnterior.toLowerCase().startsWith("stripe") && formaAnterior.toLowerCase() !== "asaas" : false;
+  const novaGera = formaNova ? !formaNova.toLowerCase().startsWith("stripe") && formaNova.toLowerCase() !== "asaas" : false;
+  const freqAnterior = getFrequenciaDaFormaPagamento(formaAnterior);
+  const freqNova = getFrequenciaDaFormaPagamento(formaNova);
+
+  let faturasExcluidas = 0;
+  let faturasGeradas = 0;
+
+  if (anteriorGera && !novaGera) {
+    const res = await excluirFaturasPendentes(id);
+    faturasExcluidas = res.count;
+  } else if (!anteriorGera && novaGera) {
+    if ((STATUS_ATIVOS as readonly string[]).includes(statusAtual)) {
+      const res = await gerarFaturasIniciaisDoCliente(id);
+      faturasGeradas = res.count;
+    }
+  } else if (anteriorGera && novaGera && freqAnterior !== freqNova) {
+    const res1 = await excluirFaturasPendentes(id);
+    faturasExcluidas = res1.count;
+    if ((STATUS_ATIVOS as readonly string[]).includes(statusAtual)) {
+      const res2 = await gerarFaturasIniciaisDoCliente(id);
+      faturasGeradas = res2.count;
+    }
+  }
+
+  revalidatePath("/clientes");
+  revalidatePath("/financeiro");
+  revalidatePath("/financeiro/cobrancas");
+  return { success: true, faturasExcluidas, faturasGeradas };
 }
 
 /** Atualiza pacote — só admin */

@@ -42,9 +42,12 @@ import {
 } from "@/components/ui/table";
 import { formatarMoeda, formatarData, formatarDiaPagamento } from "@/lib/formatters";
 import { Badge } from "@/components/ui/badge";
+import { DialogMudarFormaPagamento } from "@/components/dialog-mudar-forma-pagamento";
+import { getFrequenciaDaFormaPagamento } from "@/lib/faturas";
 import { formatarFusoHorario } from "@/lib/fuso-horario";
 import {
   atualizarCampoCliente,
+  atualizarMultiplosCamposCliente,
   atualizarClientesEmMassa,
   atualizarPacoteCliente,
   marcarChurn,
@@ -86,6 +89,9 @@ export function TabelaClientes({ clientes, isAdmin }: TabelaClientesProps) {
   const [excluirDialog, setExcluirDialog] = useState<{ id: string; nome: string } | null>(null);
   const [excluirMassaDialog, setExcluirMassaDialog] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
+
+  // Dialog de mudança de forma de pagamento
+  const [formaDialog, setFormaDialog] = useState<{ clienteId: string; novaForma: string; formaAnterior: string | null } | null>(null);
   const [dialogMassa, setDialogMassa] = useState<{
     campo: CampoMassa;
     label: string;
@@ -218,6 +224,42 @@ export function TabelaClientes({ clientes, isAdmin }: TabelaClientesProps) {
     setExcluirMassaDialog(false);
   }
 
+  function handleFormaPagamentoInline(clienteId: string, novaForma: string, formaAnterior: string | null) {
+    const anteriorGera = formaAnterior ? !formaAnterior.toLowerCase().startsWith("stripe") && formaAnterior.toLowerCase() !== "asaas" : false;
+    const novaGera = novaForma ? !novaForma.toLowerCase().startsWith("stripe") && novaForma.toLowerCase() !== "asaas" : false;
+    const freqAnterior = getFrequenciaDaFormaPagamento(formaAnterior);
+    const freqNova = getFrequenciaDaFormaPagamento(novaForma);
+
+    // Precisa de Dialog? → quando nova forma gera faturas E (antes não gerava OU frequência mudou)
+    if (novaGera && (!anteriorGera || freqAnterior !== freqNova)) {
+      setFormaDialog({ clienteId, novaForma, formaAnterior });
+    } else {
+      // Pode atualizar direto (Server Action cuida de excluir pendentes se necessário)
+      handleInlineChange(clienteId, "forma_pagamento", novaForma);
+    }
+  }
+
+  async function confirmarMudancaForma(dadosDia: {
+    data_pagamento: number | null;
+    dia_semana_pagamento: number | null;
+    dias_pagamento_quinzenal: number[] | null;
+    data_inicio_quinzenal: string | null;
+  }) {
+    if (!formaDialog) return;
+    const resultado = await atualizarMultiplosCamposCliente(formaDialog.clienteId, {
+      forma_pagamento: formaDialog.novaForma,
+      ...dadosDia,
+    });
+    if (resultado.error) { toast.error(resultado.error); }
+    else {
+      let msg = "Forma de pagamento atualizada";
+      if (resultado.faturasExcluidas && resultado.faturasExcluidas > 0) msg += `. ${resultado.faturasExcluidas} faturas excluídas`;
+      if (resultado.faturasGeradas && resultado.faturasGeradas > 0) msg += `. ${resultado.faturasGeradas} faturas geradas`;
+      toast.success(msg);
+    }
+    setFormaDialog(null);
+  }
+
   function getOpcoesLabel(campo: CampoMassa, valor: string): string {
     if (campo === "status") return getLabelStatus(valor);
     return valor;
@@ -342,7 +384,7 @@ export function TabelaClientes({ clientes, isAdmin }: TabelaClientesProps) {
                 {/* Forma de pagamento */}
                 <TableCell className="text-zinc-300 whitespace-nowrap text-xs">
                   {isAdmin ? (
-                    <Select value={cliente.forma_pagamento || ""} onValueChange={(v) => { if (v) handleInlineChange(cliente.id, "forma_pagamento", v); }}>
+                    <Select value={cliente.forma_pagamento || ""} onValueChange={(v) => { if (v) handleFormaPagamentoInline(cliente.id, v, cliente.forma_pagamento); }}>
                       <SelectTrigger className="h-8 w-[180px] border-zinc-800 bg-transparent text-xs text-zinc-300"><SelectValue placeholder="—" /></SelectTrigger>
                       <SelectContent className="border-zinc-800 bg-zinc-950">{FORMAS_PAGAMENTO.map((f) => (<SelectItem key={f} value={f}>{f}</SelectItem>))}</SelectContent>
                     </Select>
@@ -533,6 +575,14 @@ export function TabelaClientes({ clientes, isAdmin }: TabelaClientesProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de mudança de forma de pagamento */}
+      <DialogMudarFormaPagamento
+        open={!!formaDialog}
+        onClose={() => setFormaDialog(null)}
+        novaForma={formaDialog?.novaForma || ""}
+        onConfirm={confirmarMudancaForma}
+      />
     </>
   );
 }
