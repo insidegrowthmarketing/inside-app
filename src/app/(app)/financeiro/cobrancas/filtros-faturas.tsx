@@ -21,6 +21,7 @@ interface FiltrosFaturasProps {
     forma_pagamento: string;
     mes: string;
     moeda: string;
+    tipo: string;
     busca: string;
   };
   mesesDisponiveis: { value: string; label: string }[];
@@ -57,6 +58,7 @@ export function FiltrosFaturas({ filtros, mesesDisponiveis }: FiltrosFaturasProp
     filtros.forma_pagamento !== "todos" ||
     filtros.mes !== "todos" ||
     filtros.moeda !== "todos" ||
+    filtros.tipo !== "todos" ||
     filtros.busca !== "";
 
   const triggerCls = "h-9 w-full border-zinc-800 bg-zinc-950 text-zinc-200 text-sm";
@@ -89,6 +91,7 @@ export function FiltrosFaturas({ filtros, mesesDisponiveis }: FiltrosFaturasProp
             <SelectContent className={contentCls}>
               <SelectItem value="todos">Todas</SelectItem>
               <SelectItem value="pendente">Pendentes</SelectItem>
+              <SelectItem value="vence_hoje">Vence hoje</SelectItem>
               <SelectItem value="paga">Pagas</SelectItem>
               <SelectItem value="atrasada">Atrasadas</SelectItem>
               <SelectItem value="cancelada">Canceladas</SelectItem>
@@ -130,6 +133,18 @@ export function FiltrosFaturas({ filtros, mesesDisponiveis }: FiltrosFaturasProp
               <SelectItem value="todos">Todas</SelectItem>
               <SelectItem value="BRL">BRL</SelectItem>
               <SelectItem value="USD">USD</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1 min-w-[130px] w-[130px]">
+          <Label className="text-xs text-zinc-400">Tipo</Label>
+          <Select value={filtros.tipo} onValueChange={(v) => { if (v) atualizarFiltro("tipo", v); }}>
+            <SelectTrigger className={triggerCls}><SelectValue placeholder="Todos" /></SelectTrigger>
+            <SelectContent className={contentCls}>
+              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="recorrente">Recorrente</SelectItem>
+              <SelectItem value="avulsa">Avulsa</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -24,12 +24,14 @@ interface ClienteFinanceiroProps {
 function StatusBadgeFatura({ status }: { status: StatusFaturaRuntime }) {
   const cores: Record<StatusFaturaRuntime, string> = {
     pendente: "bg-zinc-700 text-zinc-200",
+    vence_hoje: "bg-yellow-900 text-yellow-300",
     paga: "bg-green-900 text-green-300",
     atrasada: "bg-red-900 text-red-300",
     cancelada: "bg-zinc-800 text-zinc-500 line-through",
   };
   const labels: Record<StatusFaturaRuntime, string> = {
     pendente: "Pendente",
+    vence_hoje: "Vence hoje",
     paga: "Paga",
     atrasada: "Atrasada",
     cancelada: "Cancelada",

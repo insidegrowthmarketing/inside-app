@@ -15,6 +15,8 @@ export type Fatura = {
   data_pagamento_real: string | null;
   ultima_cobranca_em: string | null;
   observacoes: string | null;
+  tipo: "recorrente" | "avulsa";
+  descricao: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -29,10 +31,10 @@ export type FaturaComCliente = Fatura & {
   } | null;
 };
 
-/** Status em runtime (inclui 'atrasada' derivado) */
-export type StatusFaturaRuntime = "pendente" | "paga" | "cancelada" | "atrasada";
+/** Status em runtime (inclui 'atrasada' e 'vence_hoje' derivados) */
+export type StatusFaturaRuntime = "pendente" | "paga" | "cancelada" | "atrasada" | "vence_hoje";
 
-/** Calcula o status em runtime (atrasada = pendente + vencida) */
+/** Calcula o status em runtime */
 export function calcularStatusRuntime(fatura: Fatura): StatusFaturaRuntime {
   if (fatura.status === "paga") return "paga";
   if (fatura.status === "cancelada") return "cancelada";
@@ -40,6 +42,7 @@ export function calcularStatusRuntime(fatura: Fatura): StatusFaturaRuntime {
   hoje.setHours(0, 0, 0, 0);
   const vencimento = new Date(fatura.data_vencimento + "T00:00:00");
   if (vencimento < hoje) return "atrasada";
+  if (vencimento.getTime() === hoje.getTime()) return "vence_hoje";
   return "pendente";
 }
 
@@ -47,8 +50,15 @@ export function calcularStatusRuntime(fatura: Fatura): StatusFaturaRuntime {
 export const STATUS_FATURA = [
   { value: "pendente", label: "Pendente", cor: "zinc" },
   { value: "paga", label: "Paga", cor: "green" },
+  { value: "vence_hoje", label: "Vence hoje", cor: "yellow" },
   { value: "atrasada", label: "Atrasada", cor: "red" },
   { value: "cancelada", label: "Cancelada", cor: "strikethrough" },
+] as const;
+
+/** Tipo de fatura */
+export const TIPO_FATURA = [
+  { value: "recorrente", label: "Recorrente", cor: "zinc" },
+  { value: "avulsa", label: "Avulsa", cor: "violet" },
 ] as const;
 
 /** Dias da semana */

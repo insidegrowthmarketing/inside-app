@@ -200,6 +200,63 @@ export async function cancelarFaturasFuturas(
 // Estas SIM chamam revalidar()
 // =============================================
 
+/** Cria cobrança(s) avulsa(s) — só admin */
+export async function criarCobrancaAvulsa(dados: {
+  cliente_id: string;
+  forma_pagamento: string;
+  moeda: "BRL" | "USD";
+  frequencia: "unica" | "recorrente" | "parcelada";
+  quantidade: number;
+  periodicidade: "semanal" | "quinzenal" | "mensal" | null;
+  data_primeira_cobranca: string;
+  valor_por_fatura: number;
+  descricao: string | null;
+}) {
+  const email = await getEmailLogado();
+  if (!ehAdmin(email)) return { error: "Sem permissão.", count: 0 };
+
+  const supabase = await createClient();
+  const qtd = dados.frequencia === "unica" ? 1 : dados.quantidade;
+
+  // Calcular datas
+  const datas: string[] = [];
+  const primeira = new Date(dados.data_primeira_cobranca + "T00:00:00");
+
+  for (let i = 0; i < qtd; i++) {
+    const d = new Date(primeira);
+    if (i > 0 && dados.periodicidade) {
+      switch (dados.periodicidade) {
+        case "semanal": d.setDate(d.getDate() + 7 * i); break;
+        case "quinzenal": d.setDate(d.getDate() + 15 * i); break;
+        case "mensal": d.setMonth(d.getMonth() + i); break;
+      }
+    }
+    datas.push(d.toISOString().split("T")[0]);
+  }
+
+  // Inserir faturas
+  const faturas = datas.map((dataVenc) => ({
+    cliente_id: dados.cliente_id,
+    data_referencia: dataVenc,
+    data_vencimento: dataVenc,
+    valor: dados.valor_por_fatura,
+    moeda: dados.moeda,
+    forma_pagamento: dados.forma_pagamento,
+    tipo: "avulsa" as const,
+    descricao: dados.descricao,
+    status: "pendente" as const,
+  }));
+
+  const { error } = await supabase.from("faturas").insert(faturas);
+  if (error) {
+    console.error("Erro ao criar cobrança avulsa:", error);
+    return { error: "Erro ao criar cobrança.", count: 0 };
+  }
+
+  revalidar();
+  return { success: true, count: faturas.length };
+}
+
 /** Gera faturas do mês para todos os clientes ativos (botão manual) — só admin */
 export async function gerarFaturasDoMes(mesStr: string) {
   const email = await getEmailLogado();

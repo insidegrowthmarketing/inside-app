@@ -53,12 +53,14 @@ interface TabelaFaturasProps {
 function StatusBadgeFatura({ status }: { status: StatusFaturaRuntime }) {
   const cores: Record<StatusFaturaRuntime, string> = {
     pendente: "bg-zinc-700 text-zinc-200",
+    vence_hoje: "bg-yellow-900 text-yellow-300",
     paga: "bg-green-900 text-green-300",
     atrasada: "bg-red-900 text-red-300",
     cancelada: "bg-zinc-800 text-zinc-500 line-through",
   };
   const labels: Record<StatusFaturaRuntime, string> = {
     pendente: "Pendente",
+    vence_hoje: "Vence hoje",
     paga: "Paga",
     atrasada: "Atrasada",
     cancelada: "Cancelada",
@@ -167,6 +169,7 @@ export function TabelaFaturas({ faturas, isAdmin }: TabelaFaturasProps) {
             <TableRow className="border-zinc-800 hover:bg-transparent">
               {isAdmin && <TableHead className="w-10 text-zinc-400"><Checkbox checked={todosSelecionados} onCheckedChange={toggleTodos} /></TableHead>}
               <TableHead className="text-zinc-400 whitespace-nowrap">Cliente</TableHead>
+              <TableHead className="text-zinc-400 whitespace-nowrap">Tipo</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Contato</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Referência</TableHead>
               <TableHead className="text-zinc-400 whitespace-nowrap">Vencimento</TableHead>
@@ -185,10 +188,15 @@ export function TabelaFaturas({ faturas, isAdmin }: TabelaFaturasProps) {
               const venc = new Date(f.data_vencimento + "T00:00:00");
               const diasAtraso = statusRT === "atrasada" ? Math.ceil((hoje.getTime() - venc.getTime()) / 86400000) : 0;
               return (
-                <TableRow key={f.id} className="border-zinc-800 hover:bg-zinc-800/50">
+                <TableRow key={f.id} className={cn("border-zinc-800 hover:bg-zinc-800/50", statusRT === "vence_hoje" && "bg-yellow-500/5 border-l-4 border-l-yellow-500", statusRT === "atrasada" && "bg-red-500/5 border-l-4 border-l-red-500")}>
                   {isAdmin && <TableCell><Checkbox checked={selecionados.has(f.id)} onCheckedChange={() => toggleUm(f.id)} /></TableCell>}
                   <TableCell className="font-medium text-zinc-200 whitespace-nowrap">
                     <Link href={`/clientes/${f.clientes?.id || f.cliente_id}`} className="hover:underline">{f.clientes?.nome || "—"}</Link>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <Badge className={cn("border-0 text-[10px] font-medium", f.tipo === "avulsa" ? "bg-violet-500/20 text-violet-300" : "bg-zinc-800 text-zinc-400")} title={f.tipo === "avulsa" && f.descricao ? f.descricao : undefined}>
+                      {f.tipo === "avulsa" ? "Avulsa" : "Recorrente"}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-zinc-300 whitespace-nowrap text-sm">
                     {(() => {

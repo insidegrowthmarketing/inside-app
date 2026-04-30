@@ -1,5 +1,13 @@
 import type { Cliente } from "@/types/cliente";
 
+/** Verifica se a data de vencimento é HOJE */
+export function venceHoje(dataVencimento: string): boolean {
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const venc = new Date(dataVencimento + "T00:00:00");
+  return venc.getTime() === hoje.getTime();
+}
+
 /** Verifica se o cliente deve ter faturas geradas automaticamente */
 export function clienteGeraFaturasAutomaticamente(cliente: {
   forma_pagamento?: string | null;
