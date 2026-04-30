@@ -87,15 +87,17 @@ export async function gerarFaturasDoCliente(
   return { count };
 }
 
-/** Gera faturas do mês atual + próximos 2 meses para um cliente. NÃO revalida. */
+/** Gera faturas a partir de HOJE + próximos 2 meses para um cliente. NÃO revalida. */
 export async function gerarFaturasIniciaisDoCliente(clienteId: string) {
   const hoje = new Date();
-  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  hoje.setHours(0, 0, 0, 0);
+
   const fimHorizonte = new Date(hoje.getFullYear(), hoje.getMonth() + 3, 0);
 
-  const inicioStr = inicioMes.toISOString().split("T")[0];
+  const inicioStr = hoje.toISOString().split("T")[0];
   const fimStr = fimHorizonte.toISOString().split("T")[0];
 
+  console.log("[gerarFaturasIniciaisDoCliente] Intervalo:", inicioStr, "→", fimStr);
   return gerarFaturasDoCliente(clienteId, inicioStr, fimStr);
 }
 
@@ -141,18 +143,34 @@ export async function autoCurarFaturas() {
 
 /** Exclui (deleta) TODAS as faturas pendentes de um cliente. NÃO revalida. */
 export async function excluirFaturasPendentes(clienteId: string) {
+  console.log("[excluirFaturasPendentes] Cliente:", clienteId);
   const supabase = await createClient();
-  const { error, count } = await supabase
+
+  // Primeiro contar quantas existem
+  const { data: pendentes } = await supabase
     .from("faturas")
-    .delete()
+    .select("id")
     .eq("cliente_id", clienteId)
     .eq("status", "pendente");
 
+  const total = pendentes?.length ?? 0;
+  console.log("[excluirFaturasPendentes] Faturas pendentes encontradas:", total);
+
+  if (total === 0) return { count: 0 };
+
+  const ids = pendentes!.map((f) => f.id);
+  const { error } = await supabase
+    .from("faturas")
+    .delete()
+    .in("id", ids);
+
   if (error) {
-    console.error("Erro ao excluir faturas pendentes:", error);
+    console.error("[excluirFaturasPendentes] Erro:", error);
     return { error: "Erro ao excluir faturas.", count: 0 };
   }
-  return { count: count ?? 0 };
+
+  console.log("[excluirFaturasPendentes] Faturas excluídas:", total);
+  return { count: total };
 }
 
 /** Cancela faturas pendentes após uma data. NÃO revalida. */

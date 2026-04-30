@@ -158,6 +158,36 @@ export async function atualizarCampoCliente(id: string, campo: string, valor: st
   if (campo !== "status" && !ehAdmin(email)) return { error: "Sem permissão." };
 
   const supabase = await createClient();
+
+  // Se mudou forma_pagamento, detectar tipo de mudança e agir sobre faturas
+  if (campo === "forma_pagamento") {
+    const { data: clienteAtual } = await supabase.from("clientes").select("forma_pagamento").eq("id", id).single();
+    const formaAnterior = clienteAtual?.forma_pagamento || null;
+
+    console.log("[atualizarCampoCliente] forma_pagamento mudou:", formaAnterior, "→", valor);
+
+    const { error } = await supabase.from("clientes").update({ [campo]: valor }).eq("id", id);
+    if (error) return { error: "Erro ao atualizar." };
+
+    const anteriorGera = formaAnterior ? !formaAnterior.toLowerCase().startsWith("stripe") && formaAnterior.toLowerCase() !== "asaas" : false;
+    const novaGera = valor ? !valor.toLowerCase().startsWith("stripe") && valor.toLowerCase() !== "asaas" : false;
+
+    console.log("[atualizarCampoCliente] anteriorGera:", anteriorGera, "novaGera:", novaGera);
+
+    if (anteriorGera && !novaGera) {
+      console.log("[atualizarCampoCliente] STOP_FATURAS → excluindo pendentes");
+      const res = await excluirFaturasPendentes(id);
+      console.log("[atualizarCampoCliente] Faturas excluídas:", res.count);
+    }
+
+    revalidatePath("/clientes");
+    revalidatePath("/clientes/ltv");
+    revalidatePath("/financeiro");
+    revalidatePath("/financeiro/cobrancas");
+    revalidatePath("/dashboards/financeiro");
+    return { success: true };
+  }
+
   const { error } = await supabase.from("clientes").update({ [campo]: valor }).eq("id", id);
   if (error) return { error: "Erro ao atualizar." };
 
