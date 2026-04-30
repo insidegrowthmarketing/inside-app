@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { X, MoreHorizontal } from "lucide-react";
+import { X, MoreHorizontal, MessageCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +44,7 @@ import {
   acoesMassaFaturas,
 } from "../actions";
 import { cn } from "@/lib/utils";
+import { DialogCobrarWhatsApp } from "@/components/dialog-cobrar-whatsapp";
 
 interface TabelaFaturasProps {
   faturas: FaturaComCliente[];
@@ -76,6 +77,9 @@ export function TabelaFaturas({ faturas, isAdmin }: TabelaFaturasProps) {
   const [editValor, setEditValor] = useState("");
   const [editVencimento, setEditVencimento] = useState("");
   const [editObs, setEditObs] = useState("");
+
+  // WhatsApp
+  const [whatsappDialog, setWhatsappDialog] = useState<FaturaComCliente | null>(null);
 
   // Massa
   const [dialogMassaPaga, setDialogMassaPaga] = useState(false);
@@ -223,8 +227,13 @@ export function TabelaFaturas({ faturas, isAdmin }: TabelaFaturasProps) {
                           <MoreHorizontal className="h-4 w-4" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="border-zinc-800 bg-zinc-950">
+                          <DropdownMenuItem className="text-green-400 gap-1" onClick={() => setWhatsappDialog(f)}>
+                            <MessageCircle className="h-3.5 w-3.5" />
+                            Cobrar via WhatsApp
+                          </DropdownMenuItem>
                           <DropdownMenuItem className="text-zinc-300" onClick={() => { setDialogPaga(f.id); setDataPgto(new Date().toISOString().split("T")[0]); }}>Marcar como paga</DropdownMenuItem>
-                          <DropdownMenuItem className="text-zinc-300" onClick={() => handleRegistrarCobranca(f.id)}>Registrar cobrança</DropdownMenuItem>
+                          <DropdownMenuItem className="text-zinc-300" onClick={() => handleRegistrarCobranca(f.id)}>Registrar cobrança
+                          </DropdownMenuItem>
                           <DropdownMenuItem className="text-zinc-300" onClick={() => { setDialogEditar(f); setEditValor(String(f.valor)); setEditVencimento(f.data_vencimento); setEditObs(f.observacoes || ""); }}>Editar</DropdownMenuItem>
                           <DropdownMenuItem className="text-red-400" onClick={() => handleCancelar(f.id)}>Cancelar fatura</DropdownMenuItem>
                         </DropdownMenuContent>
@@ -292,6 +301,26 @@ export function TabelaFaturas({ faturas, isAdmin }: TabelaFaturasProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog WhatsApp */}
+      {whatsappDialog && whatsappDialog.clientes && (
+        <DialogCobrarWhatsApp
+          open={!!whatsappDialog}
+          onClose={() => setWhatsappDialog(null)}
+          fatura={{
+            id: whatsappDialog.id,
+            data_vencimento: whatsappDialog.data_vencimento,
+            valor: Number(whatsappDialog.valor),
+            moeda: whatsappDialog.moeda,
+          }}
+          cliente={{
+            nome: whatsappDialog.clientes.nome,
+            responsavel_financeiro: whatsappDialog.clientes.responsavel_financeiro || null,
+            contato_financeiro: whatsappDialog.clientes.contato_financeiro || null,
+            forma_pagamento: whatsappDialog.forma_pagamento,
+          }}
+        />
+      )}
     </>
   );
 }

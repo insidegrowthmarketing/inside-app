@@ -396,3 +396,70 @@ export async function acoesMassaFaturas(faturaIds: string[], acao: "marcar_paga"
   revalidar();
   return { success: true, count: faturaIds.length };
 }
+
+// =============================================
+// Cobrança via WhatsApp
+// =============================================
+
+/** Cobra uma fatura via WhatsApp — só admin */
+export async function cobrarViaWhatsApp(
+  faturaId: string,
+  template: "lembrete_1dia" | "cobranca_dia" | "manual"
+) {
+  const email = await getEmailLogado();
+  if (!ehAdmin(email)) return { error: "Sem permissão." };
+
+  const { normalizarTelefone, gerarMensagemTemplate, enviarMensagemWhatsApp } = await import("@/lib/whatsapp");
+
+  const supabase = await createClient();
+
+  // Buscar fatura + cliente
+  const { data: fatura } = await supabase
+    .from("faturas")
+    .select("*, clientes(id, nome, responsavel_financeiro, contato_financeiro, forma_pagamento)")
+    .eq("id", faturaId)
+    .single();
+
+  if (!fatura || !fatura.clientes) return { error: "Fatura ou cliente não encontrado." };
+
+  const cliente = fatura.clientes as {
+    id: string;
+    nome: string;
+    responsavel_financeiro: string | null;
+    contato_financeiro: string | null;
+    forma_pagamento: string | null;
+  };
+
+  // Normalizar telefone
+  const numero = normalizarTelefone(cliente.contato_financeiro);
+  if (!numero) return { error: "Telefone do cliente inválido ou não cadastrado." };
+
+  // Gerar mensagem
+  const mensagem = gerarMensagemTemplate(template, fatura, cliente);
+
+  // Enviar
+  const resultado = await enviarMensagemWhatsApp(numero, mensagem);
+
+  // Registrar histórico
+  await supabase.from("cobrancas_whatsapp").insert({
+    fatura_id: faturaId,
+    cliente_id: cliente.id,
+    template_usado: template,
+    numero_destino: numero,
+    mensagem_enviada: mensagem,
+    enviado_por: email || "sistema",
+    sucesso: resultado.sucesso,
+    erro_mensagem: resultado.erro || null,
+  });
+
+  // Se sucesso, atualizar última cobrança
+  if (resultado.sucesso) {
+    const hojeStr = new Date().toISOString().split("T")[0];
+    await supabase.from("faturas").update({ ultima_cobranca_em: hojeStr }).eq("id", faturaId);
+  }
+
+  revalidar();
+  return resultado.sucesso
+    ? { success: true }
+    : { error: resultado.erro || "Falha ao enviar mensagem." };
+}
