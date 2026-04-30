@@ -58,10 +58,12 @@ export async function atualizarCliente(id: string, formData: unknown) {
   const supabase = await createClient();
 
   if (ehAdmin(email)) {
-    // Buscar cliente atual pra detectar mudança de forma de pagamento
-    const { data: clienteAtual } = await supabase.from("clientes").select("forma_pagamento").eq("id", id).single();
-    const formaAnterior = clienteAtual?.forma_pagamento || null;
-    const formaNova = parsed.data.forma_pagamento || null;
+    // Buscar cliente atual completo pra detectar mudanças
+    const { data: clienteAtual } = await supabase
+      .from("clientes")
+      .select("forma_pagamento, data_pagamento, dia_semana_pagamento, dias_pagamento_quinzenal, data_inicio_quinzenal")
+      .eq("id", id)
+      .single();
 
     // Admin pode atualizar TUDO
     const dados = limparDadosVazios(parsed.data);
@@ -69,29 +71,33 @@ export async function atualizarCliente(id: string, formData: unknown) {
     if (error) { console.error("Erro ao atualizar cliente:", error); return { error: "Erro ao atualizar cliente." }; }
 
     const statusAtual = parsed.data.status;
+    const formaAnterior = clienteAtual?.forma_pagamento || null;
+    const formaNova = parsed.data.forma_pagamento || null;
 
-    // Detectar mudança de forma de pagamento
     const anteriorGera = formaAnterior ? !formaAnterior.toLowerCase().startsWith("stripe") && formaAnterior.toLowerCase() !== "asaas" : false;
     const novaGera = formaNova ? !formaNova.toLowerCase().startsWith("stripe") && formaNova.toLowerCase() !== "asaas" : false;
-    const freqAnterior = getFrequenciaDaFormaPagamento(formaAnterior);
-    const freqNova = getFrequenciaDaFormaPagamento(formaNova);
+
+    const formaMudou = formaAnterior !== formaNova;
+    const diaMudou =
+      parsed.data.data_pagamento !== clienteAtual?.data_pagamento ||
+      parsed.data.dia_semana_pagamento !== clienteAtual?.dia_semana_pagamento ||
+      JSON.stringify(parsed.data.dias_pagamento_quinzenal) !== JSON.stringify(clienteAtual?.dias_pagamento_quinzenal) ||
+      (parsed.data.data_inicio_quinzenal || null) !== (clienteAtual?.data_inicio_quinzenal || null);
 
     if (anteriorGera && !novaGera) {
-      // STOP_FATURAS: era Zelle/BOFA, virou Stripe/ASAAS → excluir pendentes
       await excluirFaturasPendentes(id);
     } else if (!anteriorGera && novaGera) {
-      // START_FATURAS: era Stripe/ASAAS, virou Zelle/BOFA → gerar novas
       if ((STATUS_ATIVOS as readonly string[]).includes(statusAtual)) {
         await gerarFaturasIniciaisDoCliente(id);
       }
-    } else if (anteriorGera && novaGera && freqAnterior !== freqNova) {
-      // MUDA_FREQUENCIA: mudou dentro de Zelle/BOFA → excluir + gerar
+    } else if (anteriorGera && novaGera && (formaMudou || diaMudou)) {
+      // Mudou forma ou dia: excluir antigas + gerar novas
       await excluirFaturasPendentes(id);
       if ((STATUS_ATIVOS as readonly string[]).includes(statusAtual)) {
         await gerarFaturasIniciaisDoCliente(id);
       }
-    } else if (formaAnterior === formaNova && (STATUS_ATIVOS as readonly string[]).includes(statusAtual) && clienteGeraFaturasAutomaticamente(parsed.data)) {
-      // Mesma forma, mas pode precisar gerar faturas faltantes (auto-cura)
+    } else if (novaGera && (STATUS_ATIVOS as readonly string[]).includes(statusAtual)) {
+      // Nada mudou na forma/dia, mas pode precisar gerar faltantes
       await gerarFaturasIniciaisDoCliente(id);
     }
 
@@ -188,6 +194,26 @@ export async function atualizarCampoCliente(id: string, campo: string, valor: st
     return { success: true };
   }
 
+  // Se mudou campo de dia de pagamento em cliente que gera faturas: regenerar
+  const camposDia = ["data_pagamento", "dia_semana_pagamento", "dias_pagamento_quinzenal", "data_inicio_quinzenal"];
+  if (camposDia.includes(campo)) {
+    const { data: cli } = await supabase.from("clientes").select("forma_pagamento, status").eq("id", id).single();
+    const geraFaturas = cli?.forma_pagamento ? !cli.forma_pagamento.toLowerCase().startsWith("stripe") && cli.forma_pagamento.toLowerCase() !== "asaas" : false;
+
+    const { error } = await supabase.from("clientes").update({ [campo]: valor }).eq("id", id);
+    if (error) return { error: "Erro ao atualizar." };
+
+    if (geraFaturas && (STATUS_ATIVOS as readonly string[]).includes(cli?.status || "")) {
+      await excluirFaturasPendentes(id);
+      await gerarFaturasIniciaisDoCliente(id);
+    }
+
+    revalidatePath("/clientes");
+    revalidatePath("/financeiro");
+    revalidatePath("/financeiro/cobrancas");
+    return { success: true };
+  }
+
   const { error } = await supabase.from("clientes").update({ [campo]: valor }).eq("id", id);
   if (error) return { error: "Erro ao atualizar." };
 
@@ -207,33 +233,46 @@ export async function atualizarMultiplosCamposCliente(
 
   const supabase = await createClient();
 
-  // Buscar forma anterior pra detectar mudança
-  const { data: clienteAtual } = await supabase.from("clientes").select("forma_pagamento, status").eq("id", id).single();
+  // Buscar cliente atual completo pra detectar mudanças
+  const { data: clienteAtual } = await supabase
+    .from("clientes")
+    .select("forma_pagamento, status, data_pagamento, dia_semana_pagamento, dias_pagamento_quinzenal, data_inicio_quinzenal")
+    .eq("id", id)
+    .single();
+
   const formaAnterior = clienteAtual?.forma_pagamento || null;
-  const formaNova = (dados.forma_pagamento as string) || formaAnterior;
+  const formaNova = (dados.forma_pagamento as string | undefined) ?? formaAnterior;
   const statusAtual = clienteAtual?.status || "ongoing";
 
   const { error } = await supabase.from("clientes").update(dados).eq("id", id);
   if (error) return { error: "Erro ao atualizar." };
 
-  // Lógica de faturas
+  // Detectar mudanças de forma e/ou dia de pagamento
   const anteriorGera = formaAnterior ? !formaAnterior.toLowerCase().startsWith("stripe") && formaAnterior.toLowerCase() !== "asaas" : false;
   const novaGera = formaNova ? !formaNova.toLowerCase().startsWith("stripe") && formaNova.toLowerCase() !== "asaas" : false;
-  const freqAnterior = getFrequenciaDaFormaPagamento(formaAnterior);
-  const freqNova = getFrequenciaDaFormaPagamento(formaNova);
+
+  const formaMudou = formaAnterior !== formaNova;
+  const diaMudou =
+    (dados.data_pagamento !== undefined && dados.data_pagamento !== clienteAtual?.data_pagamento) ||
+    (dados.dia_semana_pagamento !== undefined && dados.dia_semana_pagamento !== clienteAtual?.dia_semana_pagamento) ||
+    (dados.dias_pagamento_quinzenal !== undefined && JSON.stringify(dados.dias_pagamento_quinzenal) !== JSON.stringify(clienteAtual?.dias_pagamento_quinzenal)) ||
+    (dados.data_inicio_quinzenal !== undefined && dados.data_inicio_quinzenal !== clienteAtual?.data_inicio_quinzenal);
 
   let faturasExcluidas = 0;
   let faturasGeradas = 0;
 
   if (anteriorGera && !novaGera) {
+    // GERA → NÃO GERA: excluir
     const res = await excluirFaturasPendentes(id);
     faturasExcluidas = res.count;
   } else if (!anteriorGera && novaGera) {
+    // NÃO GERA → GERA: gerar
     if ((STATUS_ATIVOS as readonly string[]).includes(statusAtual)) {
       const res = await gerarFaturasIniciaisDoCliente(id);
       faturasGeradas = res.count;
     }
-  } else if (anteriorGera && novaGera && freqAnterior !== freqNova) {
+  } else if (anteriorGera && novaGera && (formaMudou || diaMudou)) {
+    // GERA → GERA mas mudou forma ou dia: excluir + gerar
     const res1 = await excluirFaturasPendentes(id);
     faturasExcluidas = res1.count;
     if ((STATUS_ATIVOS as readonly string[]).includes(statusAtual)) {
