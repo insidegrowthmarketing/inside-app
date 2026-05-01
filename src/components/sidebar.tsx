@@ -35,7 +35,6 @@ import { cn } from "@/lib/utils";
 
 /** Itens futuros */
 const menuFuturo = [
-  { label: "Comercial", icon: TrendingUp },
   { label: "Operacional", icon: Briefcase },
   { label: "Equipe", icon: UserCog },
 ];
@@ -45,6 +44,7 @@ const subMenuDashboards = [
   { href: "/dashboards/clientes", label: "Clientes", icon: Users },
   { href: "/dashboards/ltv", label: "LTV", icon: History },
   { href: "/dashboards/financeiro", label: "Financeiro", icon: DollarSign },
+  { href: "/dashboards/comercial", label: "Comercial", icon: TrendingUp },
 ];
 const subMenuClientes = [
   { href: "/clientes", label: "Base de Clientes", icon: BookUser },
