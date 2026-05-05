@@ -80,8 +80,10 @@ Leia o briefing abaixo e retorne APENAS um JSON válido (sem markdown, sem expli
 }
 
 Regras importantes:
-- Se o briefing mencionar "Stripe USA" ou "Stripe EUA" + valor semanal → use "Stripe EUA semanal"
-- Se mencionar Stripe + valor mensal apenas → use "Stripe EUA mensal" (ou Brasil se contexto for BRL)
+- REGRAS DE FORMA DE PAGAMENTO (Stripe):
+  1. Procure no briefing menções literais: 'Stripe Brasil', 'Stripe BRA', 'Stripe BR' → começa com 'Stripe Brasil'. 'Stripe EUA', 'Stripe USA', 'Stripe US' → começa com 'Stripe EUA'.
+  2. Se NÃO especificar Brasil/EUA: moeda BRL → 'Stripe Brasil', moeda USD → 'Stripe EUA'.
+  3. Frequência: se menciona valor semanal ou 'semanal' → '... semanal', senão → '... mensal'.
 - Se mencionar ZELLE → identifique mensal/semanal/quinzenal pelo contexto
 - Se mencionar ASAAS → use "ASAAS"
 - Se não conseguir identificar um campo com certeza, retorne null

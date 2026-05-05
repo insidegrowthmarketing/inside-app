@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatarMoeda, formatarData } from "@/lib/formatters";
+import { calcularMesesAtivos, calcularLTV } from "@/lib/ltv";
 import { PACOTES } from "@/types/cliente";
 import type { Cliente } from "@/types/cliente";
 import { LtvFilters } from "./ltv-filters";
@@ -26,17 +27,8 @@ interface PageProps {
     gestor_trafego?: string;
     pais?: string;
     motivo_churn?: string;
+    mes_churn?: string;
   }>;
-}
-
-function calcularMesesAtivo(inicio: string | null, saida: string | null): number {
-  if (!inicio || !saida) return 0;
-  const d1 = new Date(inicio + "T00:00:00");
-  const d2 = new Date(saida + "T00:00:00");
-  if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return 0;
-  const meses = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
-  const diasRestantes = d2.getDate() - d1.getDate();
-  return Math.max(1, Math.round(meses + diasRestantes / 30));
 }
 
 function getLabelPacote(value: string | null) {
@@ -76,6 +68,9 @@ export default async function LtvPage({ searchParams }: PageProps) {
   if (params.motivo_churn && params.motivo_churn !== "todos") {
     query = query.eq("motivo_churn", params.motivo_churn);
   }
+  if (params.mes_churn && params.mes_churn !== "todos") {
+    query = query.gte("data_saida", params.mes_churn + "-01").lte("data_saida", params.mes_churn + "-31");
+  }
 
   const { data: clientes, error } = await query;
 
@@ -88,22 +83,17 @@ export default async function LtvPage({ searchParams }: PageProps) {
   const totalChurned = lista.length;
   const ltvBRL = lista
     .filter((c) => (c.moeda || "BRL") === "BRL")
-    .reduce((acc, c) => {
-      const meses = calcularMesesAtivo(c.inicio_contrato, c.data_saida);
-      return acc + Number(c.fee_mensal) * meses;
-    }, 0);
+    .reduce((acc, c) => acc + calcularLTV(c), 0);
   const ltvUSD = lista
     .filter((c) => c.moeda === "USD")
-    .reduce((acc, c) => {
-      const meses = calcularMesesAtivo(c.inicio_contrato, c.data_saida);
-      return acc + Number(c.fee_mensal) * meses;
-    }, 0);
+    .reduce((acc, c) => acc + calcularLTV(c), 0);
 
   const filtros = {
     gestor_projetos: params.gestor_projetos || "todos",
     gestor_trafego: params.gestor_trafego || "todos",
     pais: params.pais || "todos",
     motivo_churn: params.motivo_churn || "todos",
+    mes_churn: params.mes_churn || "todos",
     busca: params.busca || "",
   };
 
@@ -188,8 +178,8 @@ export default async function LtvPage({ searchParams }: PageProps) {
               </TableHeader>
               <TableBody>
                 {lista.map((cliente) => {
-                  const meses = calcularMesesAtivo(cliente.inicio_contrato, cliente.data_saida);
-                  const ltv = Number(cliente.fee_mensal) * meses;
+                  const meses = calcularMesesAtivos(cliente);
+                  const ltv = calcularLTV(cliente);
                   const moeda = cliente.moeda || "BRL";
                   const simboloMoeda = moeda === "BRL" ? "R$" : "US$";
 

@@ -21,6 +21,7 @@ interface LtvFiltersProps {
     gestor_trafego: string;
     pais: string;
     motivo_churn: string;
+    mes_churn: string;
     busca: string;
   };
 }
@@ -49,6 +50,7 @@ export function LtvFilters({ filtros }: LtvFiltersProps) {
     filtros.gestor_trafego !== "todos" ||
     filtros.pais !== "todos" ||
     filtros.motivo_churn !== "todos" ||
+    filtros.mes_churn !== "todos" ||
     filtros.busca !== "";
 
   const triggerCls = "h-9 w-full border-zinc-800 bg-zinc-950 text-zinc-200 text-sm";
@@ -90,6 +92,23 @@ export function LtvFilters({ filtros }: LtvFiltersProps) {
           <Select value={filtros.motivo_churn} onValueChange={(v) => { if (v) atualizarFiltro("motivo_churn", v); }}>
             <SelectTrigger className={triggerCls}><SelectValue placeholder="Todos" /></SelectTrigger>
             <SelectContent className={contentCls}><SelectItem value="todos">Todos</SelectItem>{MOTIVOS_CHURN.map((m) => (<SelectItem key={m} value={m}>{m}</SelectItem>))}</SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1 min-w-[180px] w-[180px]">
+          <Label className="text-xs text-zinc-400">Mês do Churn</Label>
+          <Select value={filtros.mes_churn} onValueChange={(v) => { if (v) atualizarFiltro("mes_churn", v); }}>
+            <SelectTrigger className={triggerCls}><SelectValue placeholder="Todos" /></SelectTrigger>
+            <SelectContent className={contentCls}>
+              <SelectItem value="todos">Todos</SelectItem>
+              {Array.from({ length: 12 }, (_, i) => {
+                const d = new Date();
+                d.setMonth(d.getMonth() - i);
+                const valor = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+                const mesesNome = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+                return <SelectItem key={valor} value={valor}>{mesesNome[d.getMonth()]}/{d.getFullYear()}</SelectItem>;
+              })}
+            </SelectContent>
           </Select>
         </div>
 

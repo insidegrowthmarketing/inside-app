@@ -53,7 +53,15 @@ export async function gerarFaturasDoCliente(
   if (!frequencia) return { count: 0 };
 
   const dataInicio = new Date(dataInicioStr + "T00:00:00");
-  const dataFim = new Date(dataFimStr + "T00:00:00");
+  let dataFim = new Date(dataFimStr + "T00:00:00");
+
+  // Pacote Start: limitar faturas ao período de 35 dias
+  if (c.pacote === "start" && c.inicio_contrato) {
+    const limiteStart = new Date(c.inicio_contrato + "T00:00:00");
+    limiteStart.setDate(limiteStart.getDate() + 35);
+    if (dataFim > limiteStart) dataFim = limiteStart;
+  }
+
   const datas = gerarDatasFaturas(c, dataInicio, dataFim);
   const valor = calcularValorFatura(Number(c.fee_mensal), frequencia);
 

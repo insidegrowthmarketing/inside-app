@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { GESTORES_PROJETOS, GESTORES_TRAFEGO } from "@/types/cliente";
+import { GESTORES_PROJETOS, GESTORES_TRAFEGO, MOTIVOS_CHURN } from "@/types/cliente";
 
 interface DashboardFiltroProps {
   filtros: {
@@ -21,6 +21,8 @@ interface DashboardFiltroProps {
     gestor_projetos: string;
     gestor_trafego: string;
     squad: string;
+    motivo_churn: string;
+    mes_churn: string;
   };
 }
 
@@ -93,7 +95,9 @@ export function DashboardFiltro({ filtros }: DashboardFiltroProps) {
     !isHoje ||
     filtros.gestor_projetos !== "todos" ||
     filtros.gestor_trafego !== "todos" ||
-    filtros.squad !== "todos";
+    filtros.squad !== "todos" ||
+    filtros.motivo_churn !== "todos" ||
+    filtros.mes_churn !== "todos";
 
   const triggerCls = "h-8 w-full border-zinc-800 bg-zinc-950 text-zinc-200 text-xs";
   const contentCls = "border-zinc-800 bg-zinc-950";
@@ -106,7 +110,12 @@ export function DashboardFiltro({ filtros }: DashboardFiltroProps) {
         <Select
           value={presetAtual}
           onValueChange={(v) => {
-            if (!v || v === "personalizada") return;
+            if (!v) return;
+            if (v === "personalizada") {
+              // Setar data de hoje como ponto de partida pra customização
+              atualizarFiltro("dataCorte", new Date().toISOString().split("T")[0]);
+              return;
+            }
             atualizarFiltro("dataCorte", calcularData(v));
           }}
         >
@@ -167,6 +176,36 @@ export function DashboardFiltro({ filtros }: DashboardFiltroProps) {
             <SelectItem value="todos">Todos</SelectItem>
             <SelectItem value="high_impact">High Impact</SelectItem>
             <SelectItem value="genesis">Genesis</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Motivo do Churn */}
+      <div className="flex flex-col gap-1 min-w-[200px]">
+        <Label className="text-xs text-zinc-500">Motivo do Churn</Label>
+        <Select value={filtros.motivo_churn} onValueChange={(v) => { if (v) atualizarFiltro("motivo_churn", v); }}>
+          <SelectTrigger className={triggerCls}><SelectValue placeholder="Todos" /></SelectTrigger>
+          <SelectContent className={contentCls}>
+            <SelectItem value="todos">Todos</SelectItem>
+            {MOTIVOS_CHURN.map((m) => (<SelectItem key={m} value={m}>{m}</SelectItem>))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Mês do Churn */}
+      <div className="flex flex-col gap-1 min-w-[160px]">
+        <Label className="text-xs text-zinc-500">Mês do Churn</Label>
+        <Select value={filtros.mes_churn} onValueChange={(v) => { if (v) atualizarFiltro("mes_churn", v); }}>
+          <SelectTrigger className={triggerCls}><SelectValue placeholder="Todos" /></SelectTrigger>
+          <SelectContent className={contentCls}>
+            <SelectItem value="todos">Todos</SelectItem>
+            {Array.from({ length: 12 }, (_, i) => {
+              const d = new Date();
+              d.setMonth(d.getMonth() - i);
+              const valor = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+              const mesesNome = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+              return <SelectItem key={valor} value={valor}>{mesesNome[d.getMonth()]}/{d.getFullYear()}</SelectItem>;
+            })}
           </SelectContent>
         </Select>
       </div>

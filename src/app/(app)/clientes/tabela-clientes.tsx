@@ -104,6 +104,13 @@ export function TabelaClientes({ clientes, isAdmin }: TabelaClientesProps) {
   const [dataSaidaChurn, setDataSaidaChurn] = useState(new Date().toISOString().split("T")[0]);
   const [motivoChurn, setMotivoChurn] = useState("");
 
+  // Dialog de aviso prévio
+  const [avisoPrevioDialog, setAvisoPrevioDialog] = useState<{ tipo: "inline"; clienteId: string } | { tipo: "massa" } | null>(null);
+  const [dataSaidaAviso, setDataSaidaAviso] = useState(() => {
+    const d = new Date(); d.setDate(d.getDate() + 30);
+    return d.toISOString().split("T")[0];
+  });
+
   const todosIds = clientes.map((c) => c.id);
   const todosSelecionados = clientes.length > 0 && selecionados.size === clientes.length;
 
@@ -129,6 +136,12 @@ export function TabelaClientes({ clientes, isAdmin }: TabelaClientesProps) {
       setChurnDialog({ tipo: "inline", clienteId: id });
       setDataSaidaChurn(new Date().toISOString().split("T")[0]);
       setMotivoChurn("");
+      return;
+    }
+    if (novoStatus === "aviso_previo") {
+      setAvisoPrevioDialog({ tipo: "inline", clienteId: id });
+      const d = new Date(); d.setDate(d.getDate() + 30);
+      setDataSaidaAviso(d.toISOString().split("T")[0]);
       return;
     }
     const resultado = await atualizarCampoCliente(id, "status", novoStatus);
@@ -193,6 +206,15 @@ export function TabelaClientes({ clientes, isAdmin }: TabelaClientesProps) {
       setMotivoChurn("");
       return;
     }
+    // Se for status aviso_previo, abrir dialog de aviso prévio
+    if (dialogMassa.campo === "status" && valorMassa === "aviso_previo") {
+      setDialogMassa(null);
+      setValorMassa("");
+      setAvisoPrevioDialog({ tipo: "massa" });
+      const d = new Date(); d.setDate(d.getDate() + 30);
+      setDataSaidaAviso(d.toISOString().split("T")[0]);
+      return;
+    }
 
     const ids = Array.from(selecionados);
     const resultado = await atualizarClientesEmMassa(ids, dialogMassa.campo, valorMassa);
@@ -222,6 +244,27 @@ export function TabelaClientes({ clientes, isAdmin }: TabelaClientesProps) {
     if (res.error) { toast.error(res.error); } else { toast.success(`${res.count} clientes excluídos`); setSelecionados(new Set()); }
     setExcluindo(false);
     setExcluirMassaDialog(false);
+  }
+
+  async function confirmarAvisoPrevio() {
+    if (!avisoPrevioDialog || !dataSaidaAviso) return;
+
+    if (avisoPrevioDialog.tipo === "inline") {
+      const resultado = await atualizarMultiplosCamposCliente(avisoPrevioDialog.clienteId, {
+        status: "aviso_previo",
+        data_saida: dataSaidaAviso,
+      });
+      if (resultado.error) toast.error(resultado.error);
+      else toast.success(`Cliente em aviso prévio até ${new Date(dataSaidaAviso + "T00:00:00").toLocaleDateString("pt-BR")}`);
+    } else {
+      const ids = Array.from(selecionados);
+      for (const id of ids) {
+        await atualizarMultiplosCamposCliente(id, { status: "aviso_previo", data_saida: dataSaidaAviso });
+      }
+      toast.success(`${ids.length} clientes em aviso prévio`);
+      setSelecionados(new Set());
+    }
+    setAvisoPrevioDialog(null);
   }
 
   function handleFormaPagamentoInline(clienteId: string, novaForma: string, formaAnterior: string | null) {
@@ -488,6 +531,26 @@ export function TabelaClientes({ clientes, isAdmin }: TabelaClientesProps) {
             <Button onClick={handleMassa} disabled={!valorMassa}>
               Aplicar a {selecionados.size} cliente{selecionados.size > 1 ? "s" : ""}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de aviso prévio */}
+      <Dialog open={!!avisoPrevioDialog} onOpenChange={(open) => { if (!open) setAvisoPrevioDialog(null); }}>
+        <DialogContent className="border-zinc-800 bg-zinc-900">
+          <DialogHeader>
+            <DialogTitle className="text-zinc-200">Cliente em aviso prévio</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-zinc-400">Informe a data efetiva de saída do cliente.</p>
+            <div className="space-y-2">
+              <Label>Data de saída *</Label>
+              <Input type="date" value={dataSaidaAviso} onChange={(e) => setDataSaidaAviso(e.target.value)} className="border-zinc-800 bg-zinc-950 text-zinc-200" />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" className="text-zinc-400 hover:text-white" onClick={() => setAvisoPrevioDialog(null)}>Cancelar</Button>
+            <Button onClick={confirmarAvisoPrevio} disabled={!dataSaidaAviso}>Confirmar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -12,6 +12,7 @@ import {
 import { PACOTES } from "@/types/cliente";
 import type { Cliente } from "@/types/cliente";
 import { getSquadFromHead } from "@/lib/squads";
+import { calcularMesesAtivos, calcularLTV } from "@/lib/ltv";
 import { LtvDashboardFiltro } from "./ltv-dashboard-filtro";
 import { LtvDashboardCharts } from "./ltv-dashboard-charts";
 
@@ -22,14 +23,6 @@ interface PageProps {
     gestor_trafego?: string;
     motivo?: string;
   }>;
-}
-
-function calcMeses(inicio: string | null, saida: string | null): number {
-  if (!inicio || !saida) return 0;
-  const d1 = new Date(inicio + "T00:00:00");
-  const d2 = new Date(saida + "T00:00:00");
-  if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return 0;
-  return Math.max(1, Math.round((d2.getTime() - d1.getTime()) / (30 * 86400000)));
 }
 
 export default async function DashboardLtvPage({ searchParams }: PageProps) {
@@ -69,8 +62,8 @@ export default async function DashboardLtvPage({ searchParams }: PageProps) {
   const totalChurned = clientes.length;
 
   const ltvsPorCliente = clientes.map((c) => {
-    const meses = calcMeses(c.inicio_contrato, c.data_saida);
-    return { ...c, meses, ltv: Number(c.fee_mensal) * meses };
+    const meses = calcularMesesAtivos(c);
+    return { ...c, meses, ltv: calcularLTV(c) };
   });
 
   const ltvBRL = ltvsPorCliente.filter((c) => (c.moeda || "BRL") === "BRL").reduce((a, c) => a + c.ltv, 0);
