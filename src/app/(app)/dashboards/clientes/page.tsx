@@ -30,8 +30,7 @@ interface PageProps {
     gestor_projetos?: string;
     gestor_trafego?: string;
     squad?: string;
-    motivo_churn?: string;
-    mes_churn?: string;
+    personalizada?: string;
   }>;
 }
 
@@ -44,12 +43,11 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const dataCorte = params.dataCorte || hojeStr;
   const isHistorico = dataCorte !== hojeStr;
 
-  // Filtros de gestor/squad/churn
+  // Filtros de gestor/squad
   const gpFiltro = params.gestor_projetos || "todos";
   const gtFiltro = params.gestor_trafego || "todos";
   const squadFiltro = params.squad || "todos";
-  const motivoChurnFiltro = params.motivo_churn || "todos";
-  const mesChurnFiltro = params.mes_churn || "todos";
+  const isPersonalizada = params.personalizada === "1";
 
   // Buscar TODOS os clientes (incluindo churn) para filtrar por data de corte
   let query = supabase.from("clientes").select("*").order("created_at", { ascending: false });
@@ -91,25 +89,15 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   let churnQuery = supabase
     .from("clientes")
-    .select("id, motivo_churn, data_saida")
-    .eq("status", "churn");
-
-  // Se filtro de mês do churn está ativo, usa ele; senão usa o mês da data de corte
-  if (mesChurnFiltro !== "todos") {
-    churnQuery = churnQuery
-      .gte("data_saida", mesChurnFiltro + "-01")
-      .lte("data_saida", mesChurnFiltro + "-31");
-  } else {
-    churnQuery = churnQuery
-      .gte("data_saida", inicioMesCorte)
-      .lte("data_saida", dataCorte);
-  }
+    .select("id")
+    .eq("status", "churn")
+    .gte("data_saida", inicioMesCorte)
+    .lte("data_saida", dataCorte);
 
   if (gpFiltro !== "todos") churnQuery = churnQuery.eq("gestor_projetos", gpFiltro);
   if (gtFiltro !== "todos") churnQuery = churnQuery.eq("gestor_trafego", gtFiltro);
   if (squadFiltro === "high_impact") churnQuery = churnQuery.eq("head", "Caio");
   else if (squadFiltro === "genesis") churnQuery = churnQuery.eq("head", "Jean");
-  if (motivoChurnFiltro !== "todos") churnQuery = churnQuery.eq("motivo_churn", motivoChurnFiltro);
   const { data: churnsDoMes } = await churnQuery;
 
   // Métricas (apenas clientes ativos — exclui pausado e churn)
@@ -243,8 +231,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         gestor_projetos: gpFiltro,
         gestor_trafego: gtFiltro,
         squad: squadFiltro,
-        motivo_churn: motivoChurnFiltro,
-        mes_churn: mesChurnFiltro,
+        personalizada: isPersonalizada,
       }} />
 
       {/* Cards numéricos */}

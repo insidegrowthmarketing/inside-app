@@ -22,6 +22,8 @@ interface PageProps {
     squad?: string;
     gestor_trafego?: string;
     motivo?: string;
+    data_inicio?: string;
+    data_fim?: string;
   }>;
 }
 
@@ -33,11 +35,15 @@ export default async function DashboardLtvPage({ searchParams }: PageProps) {
   const squadFiltro = params.squad || "todos";
   const gtFiltro = params.gestor_trafego || "todos";
   const motivoFiltro = params.motivo || "todos";
+  const dataInicioFiltro = params.data_inicio || "";
+  const dataFimFiltro = params.data_fim || "";
 
   let query = supabase.from("clientes").select("*").eq("status", "churn").not("data_saida", "is", null);
 
   // Filtro de período por data_saida
-  if (periodoFiltro !== "todos") {
+  if (periodoFiltro === "personalizado" && dataInicioFiltro && dataFimFiltro) {
+    query = query.gte("data_saida", dataInicioFiltro).lte("data_saida", dataFimFiltro);
+  } else if (periodoFiltro !== "todos" && periodoFiltro !== "personalizado") {
     const hoje = new Date();
     let desde: Date;
     switch (periodoFiltro) {
@@ -51,7 +57,11 @@ export default async function DashboardLtvPage({ searchParams }: PageProps) {
   }
 
   if (gtFiltro !== "todos") query = query.eq("gestor_trafego", gtFiltro);
-  if (motivoFiltro !== "todos") query = query.eq("motivo_churn", motivoFiltro);
+  if (motivoFiltro !== "todos") {
+    const motivos = motivoFiltro.split(",").filter(Boolean);
+    if (motivos.length === 1) query = query.eq("motivo_churn", motivos[0]);
+    else if (motivos.length > 1) query = query.in("motivo_churn", motivos);
+  }
   if (squadFiltro === "high_impact") query = query.eq("head", "Caio");
   else if (squadFiltro === "genesis") query = query.eq("head", "Jean");
 
@@ -108,6 +118,8 @@ export default async function DashboardLtvPage({ searchParams }: PageProps) {
     squad: squadFiltro,
     gestor_trafego: gtFiltro,
     motivo: motivoFiltro,
+    data_inicio: dataInicioFiltro,
+    data_fim: dataFimFiltro,
   };
 
   const cardCls = "border-zinc-800/60 bg-zinc-900/60 backdrop-blur-sm rounded-2xl";

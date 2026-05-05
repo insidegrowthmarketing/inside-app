@@ -66,7 +66,9 @@ export default async function LtvPage({ searchParams }: PageProps) {
     query = query.eq("moeda", "USD");
   }
   if (params.motivo_churn && params.motivo_churn !== "todos") {
-    query = query.eq("motivo_churn", params.motivo_churn);
+    const motivos = params.motivo_churn.split(",").filter(Boolean);
+    if (motivos.length === 1) query = query.eq("motivo_churn", motivos[0]);
+    else if (motivos.length > 1) query = query.in("motivo_churn", motivos);
   }
   if (params.mes_churn && params.mes_churn !== "todos") {
     query = query.gte("data_saida", params.mes_churn + "-01").lte("data_saida", params.mes_churn + "-31");

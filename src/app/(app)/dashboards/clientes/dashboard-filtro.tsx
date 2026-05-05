@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useTransition } from "react";
-import { X } from "lucide-react";
+import { useCallback, useState, useTransition } from "react";
+import { X, CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale/pt-BR";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -13,7 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { GESTORES_PROJETOS, GESTORES_TRAFEGO, MOTIVOS_CHURN } from "@/types/cliente";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { GESTORES_PROJETOS, GESTORES_TRAFEGO } from "@/types/cliente";
 
 interface DashboardFiltroProps {
   filtros: {
@@ -21,8 +24,7 @@ interface DashboardFiltroProps {
     gestor_projetos: string;
     gestor_trafego: string;
     squad: string;
-    motivo_churn: string;
-    mes_churn: string;
+    personalizada: boolean;
   };
 }
 
@@ -56,11 +58,13 @@ export function DashboardFiltro({ filtros }: DashboardFiltroProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const hojeStr = new Date().toISOString().split("T")[0];
-  const isHoje = filtros.dataCorte === hojeStr || !filtros.dataCorte;
+  const isHoje = (filtros.dataCorte === hojeStr || !filtros.dataCorte) && !filtros.personalizada;
 
   function getPreset(): string {
+    if (filtros.personalizada) return "personalizada";
     if (isHoje) return "hoje";
     const dc = filtros.dataCorte;
     if (dc === calcularData("fim_mes_passado")) return "fim_mes_passado";
@@ -72,19 +76,28 @@ export function DashboardFiltro({ filtros }: DashboardFiltroProps) {
 
   const presetAtual = getPreset();
 
-  const atualizarFiltro = useCallback(
-    (chave: string, valor: string) => {
+  const navegarCom = useCallback(
+    (updates: Record<string, string | null>) => {
       const params = new URLSearchParams(searchParams.toString());
-      if (!valor || valor === "todos" || (chave === "dataCorte" && valor === hojeStr)) {
-        params.delete(chave);
-      } else {
-        params.set(chave, valor);
+      for (const [chave, valor] of Object.entries(updates)) {
+        if (valor === null || valor === "" || valor === "todos") {
+          params.delete(chave);
+        } else {
+          params.set(chave, valor);
+        }
       }
       startTransition(() => {
         router.push(`/dashboards/clientes?${params.toString()}`);
       });
     },
-    [router, searchParams, startTransition, hojeStr]
+    [router, searchParams, startTransition]
+  );
+
+  const atualizarFiltro = useCallback(
+    (chave: string, valor: string) => {
+      navegarCom({ [chave]: valor || null });
+    },
+    [navegarCom]
   );
 
   const limparFiltros = useCallback(() => {
@@ -93,14 +106,18 @@ export function DashboardFiltro({ filtros }: DashboardFiltroProps) {
 
   const temFiltroAtivo =
     !isHoje ||
+    filtros.personalizada ||
     filtros.gestor_projetos !== "todos" ||
     filtros.gestor_trafego !== "todos" ||
-    filtros.squad !== "todos" ||
-    filtros.motivo_churn !== "todos" ||
-    filtros.mes_churn !== "todos";
+    filtros.squad !== "todos";
 
   const triggerCls = "h-8 w-full border-zinc-800 bg-zinc-950 text-zinc-200 text-xs";
   const contentCls = "border-zinc-800 bg-zinc-950";
+
+  // Data selecionada para o Calendar
+  const dataCorteDate = filtros.dataCorte
+    ? new Date(filtros.dataCorte + "T12:00:00")
+    : new Date();
 
   return (
     <div className="flex flex-wrap items-end gap-3">
@@ -112,11 +129,16 @@ export function DashboardFiltro({ filtros }: DashboardFiltroProps) {
           onValueChange={(v) => {
             if (!v) return;
             if (v === "personalizada") {
-              // Setar data de hoje como ponto de partida pra customização
-              atualizarFiltro("dataCorte", new Date().toISOString().split("T")[0]);
+              // Marca como personalizada e define data de hoje como ponto de partida
+              navegarCom({ dataCorte: hojeStr, personalizada: "1" });
               return;
             }
-            atualizarFiltro("dataCorte", calcularData(v));
+            // Ao sair de personalizada, limpar a flag
+            if (v === "hoje") {
+              navegarCom({ dataCorte: null, personalizada: null });
+            } else {
+              navegarCom({ dataCorte: calcularData(v), personalizada: null });
+            }
           }}
         >
           <SelectTrigger className={triggerCls}><SelectValue /></SelectTrigger>
@@ -131,15 +153,37 @@ export function DashboardFiltro({ filtros }: DashboardFiltroProps) {
         </Select>
       </div>
 
+      {/* DatePicker com Popover + Calendar */}
       {presetAtual === "personalizada" && (
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-zinc-500">Data</Label>
-          <Input
-            type="date"
-            className="h-8 w-[150px] border-zinc-800 bg-zinc-950 text-zinc-200 text-xs"
-            value={filtros.dataCorte}
-            onChange={(e) => { if (e.target.value) atualizarFiltro("dataCorte", e.target.value); }}
-          />
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger
+              className="inline-flex h-8 w-[180px] items-center justify-start gap-2 rounded-md border border-zinc-800 bg-zinc-950 px-3 text-xs text-zinc-200 hover:bg-zinc-900"
+            >
+              <CalendarIcon className="h-3.5 w-3.5 text-zinc-500" />
+              {dataCorteDate && !isNaN(dataCorteDate.getTime())
+                ? format(dataCorteDate, "dd/MM/yyyy", { locale: ptBR })
+                : "Selecione uma data"}
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-auto border-zinc-800 bg-zinc-950 p-0"
+              align="start"
+            >
+              <Calendar
+                mode="single"
+                selected={dataCorteDate}
+                onSelect={(date) => {
+                  if (date) {
+                    const iso = format(date, "yyyy-MM-dd");
+                    navegarCom({ dataCorte: iso, personalizada: "1" });
+                    setCalendarOpen(false);
+                  }
+                }}
+                locale={ptBR}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       )}
 
@@ -180,36 +224,6 @@ export function DashboardFiltro({ filtros }: DashboardFiltroProps) {
         </Select>
       </div>
 
-      {/* Motivo do Churn */}
-      <div className="flex flex-col gap-1 min-w-[200px]">
-        <Label className="text-xs text-zinc-500">Motivo do Churn</Label>
-        <Select value={filtros.motivo_churn} onValueChange={(v) => { if (v) atualizarFiltro("motivo_churn", v); }}>
-          <SelectTrigger className={triggerCls}><SelectValue placeholder="Todos" /></SelectTrigger>
-          <SelectContent className={contentCls}>
-            <SelectItem value="todos">Todos</SelectItem>
-            {MOTIVOS_CHURN.map((m) => (<SelectItem key={m} value={m}>{m}</SelectItem>))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Mês do Churn */}
-      <div className="flex flex-col gap-1 min-w-[160px]">
-        <Label className="text-xs text-zinc-500">Mês do Churn</Label>
-        <Select value={filtros.mes_churn} onValueChange={(v) => { if (v) atualizarFiltro("mes_churn", v); }}>
-          <SelectTrigger className={triggerCls}><SelectValue placeholder="Todos" /></SelectTrigger>
-          <SelectContent className={contentCls}>
-            <SelectItem value="todos">Todos</SelectItem>
-            {Array.from({ length: 12 }, (_, i) => {
-              const d = new Date();
-              d.setMonth(d.getMonth() - i);
-              const valor = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-              const mesesNome = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-              return <SelectItem key={valor} value={valor}>{mesesNome[d.getMonth()]}/{d.getFullYear()}</SelectItem>;
-            })}
-          </SelectContent>
-        </Select>
-      </div>
-
       {/* Limpar */}
       {temFiltroAtivo && (
         <Button variant="ghost" size="sm" className="h-8 gap-1 text-zinc-500 hover:text-white text-xs shrink-0" onClick={limparFiltros}>
@@ -218,7 +232,7 @@ export function DashboardFiltro({ filtros }: DashboardFiltroProps) {
         </Button>
       )}
 
-      {!isHoje && (
+      {(!isHoje || filtros.personalizada) && (
         <span className="text-[10px] text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded self-end mb-1">
           Visualização histórica
         </span>
